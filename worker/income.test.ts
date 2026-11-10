@@ -36,6 +36,30 @@ function outgoing(partial: Partial<TransferClassRow> & Pick<TransferClassRow, "i
 const homes = new Set(["h1", "h2"]);
 
 describe("income data rule", () => {
+  it("does not count own-account transfers as income (dashboard matches Ingresos)", () => {
+    const rows = [
+      income({ id: "int", label: "Transferencia interna" }),
+      income({ id: "entre", label: "TRANSFERENCIA ENTRE CUENTAS" }),
+      income({ id: "bbnk", label: "TRANSFERENCIA BBNK 306333.80" }),
+      income({ id: "cred", label: "TRANSF CREDITO Nro:215857" }),
+      income({ id: "cliente", label: "BBVA CA$ TRANSF. CLIENTE CTA. CAP093 380138 5 Nro:00010008" }),
+      income({ id: "me", label: "COMPRA ME USD" }),
+      income({ id: "pay", label: "Mauro" }),
+    ];
+    assert.equal(sumIncomeArs(rows, PERIOD, 0), 100);
+    const notes = annotateIncomeRows(rows);
+    const byId = new Map(notes.map((row) => [row.id, row]));
+    assert.equal(byId.get("int")?.internal, true);
+    assert.equal(byId.get("entre")?.internal, true);
+    assert.equal(byId.get("bbnk")?.internal, true);
+    assert.equal(byId.get("cred")?.internal, true);
+    assert.equal(byId.get("cliente")?.internal, true);
+    assert.equal(byId.get("me")?.internal, true);
+    assert.equal(byId.get("pay")?.internal, false);
+    assert.equal(byId.get("int")?.revisar, false);
+    assert.equal(byId.get("pay")?.revisar, false);
+  });
+
   it("keeps the phrase list and does not skip a generic transfer", () => {
     const rows = [
       income({ id: "tuya", label: "De una cuenta tuya" }),

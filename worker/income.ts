@@ -1,9 +1,10 @@
 /**
  * Compact port of `periodIncomeEntries` + `sumPeriodIncomeArs`.
  *
- * Variable rows are skipped when the label matches the old non-transfer
- * phrase list (cuenta tuya, cambio de moneda, DEBIN, CR TBE, …), when it
- * contains an own-account marker, or when it contains an own-account id
+ * Variable rows are skipped when the label is a non-income transfer
+ * (`isNonIncomeTransferLabel`: cuenta tuya, entre cuentas, transferencia
+ * interna, BBNK self-move, TRANSF CLIENTE CTA, FX, DEBIN, CR TBE, …), when
+ * it contains an own-account marker, or when it contains an own-account id
  * from `OWN_ACCOUNT_IDS` plus ids derived from the user's rows.
  *
  * A generic TRANSFERENCIA / TRANSFERENCIA INMEDIATA with no own id, no
@@ -19,6 +20,7 @@
  * label-skipped and are not twinned.
  */
 
+import { isNonIncomeTransferLabel } from "../src/lib/bbva/bank-entries";
 import {
   descriptionHasOwnId,
   hasOwnAccountMarker,
@@ -77,8 +79,14 @@ function foldLabel(label: string): string {
     .replace(/\p{M}/gu, "");
 }
 
-/** Phrase list for labels that are not decided by an account id. */
+/**
+ * Labels that are not ingreso. Same detector as the Ingresos page
+ * (`isNonIncomeTransferLabel`), plus the substring list so a "Depósito de
+ * cuenta propia" credit still drops (the own-account detector treats a
+ * leading DEPOSITO as a wallet credit, not a pocket move).
+ */
 function skipPhrase(label: string): boolean {
+  if (isNonIncomeTransferLabel(label)) return true;
   const u = foldLabel(label);
   return (
     u.includes("CUENTA TUYA") ||

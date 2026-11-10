@@ -73,6 +73,12 @@ const ROWS: Array<{
   { id: "s3", description: "TRANSFERENCIA A JUAN", expense: true },
   { id: "s4", description: "MERPAGO*TEMBICI", expense: true },
   { id: "s5", description: "TRANSF CREDITO Nro:215857", expense: false },
+  { id: "bbnk", description: "TRANSFERENCIA BBNK 306333.80", expense: false },
+  {
+    id: "cliente",
+    description: "BBVA CA$ TRANSF. CLIENTE CTA. CAP093 380138 5 Nro:00010008",
+    expense: false,
+  },
   { id: "s6", description: "COMPRA MERCADOLIBRE", expense: true },
   { id: "s7", description: "Retiro a Ana", expense: true },
   { id: "s8", description: "SU PAGO EN PESOS", isPayment: 1, expense: false },
@@ -184,6 +190,8 @@ describe("EXPENSE_SQL matches isExpenseRow on the phrases that drifted", () => {
     assert.equal(kept.has("w16"), true);
     assert.equal(kept.has("s3"), true);
     assert.equal(kept.has("k60"), true);
+    assert.equal(kept.has("bbnk"), false);
+    assert.equal(kept.has("cliente"), false);
   });
 });
 
@@ -624,6 +632,11 @@ describe("consumosVisibleSql matches the legacy list filter", () => {
       { description: "TRANSFERENCIA A JUAN", visible: true },
       { description: "MERPAGO*TEMBICI", visible: true },
       { description: "CR TBE INM COE", visible: true },
+      { description: "TRANSFERENCIA BBNK 306333.80", visible: true },
+      {
+        description: "BBVA CA$ TRANSF. CLIENTE CTA. CAP093 380138 5 Nro:00010008",
+        visible: true,
+      },
       { description: "De una cuenta tuya", isPayment: 1, visible: true },
       { description: "SU PAGO EN PESOS", isPayment: 1, visible: false },
       { description: "Luz hogar", isPayment: 1, slug: "luz", visible: true },

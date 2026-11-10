@@ -10,6 +10,7 @@ import {
   netWorthDeltas,
   pricedNetWorth,
   readDebt,
+  sparklineNetWorths,
   usableFxRate,
   type PatrimonioPoint,
 } from "./patrimonio";
@@ -200,5 +201,13 @@ describe("patrimonio series", () => {
     const onlyToday = [point("2026-01-01", 10, 0)];
     assert.equal(netWorthDeltas("2026-01-01", 10, onlyToday).vsYearStart, null);
     assert.equal(netWorthDeltas("2026-01-01", 10, onlyToday).vsPreviousMonth, null);
+  });
+
+  it("sparkline keeps one point per day and prefers live net worth", () => {
+    const series = [point("2026-10-30", 100, 0), point("2026-10-31", 200, 0)];
+    assert.deepEqual(sparklineNetWorths(series, "2026-10-31", 250), [100, 250]);
+    assert.deepEqual(sparklineNetWorths(series, "2026-11-01", 250), [100, 200, 250]);
+    assert.deepEqual(sparklineNetWorths(series, "2026-10-31", null), [100, 200]);
+    assert.deepEqual(sparklineNetWorths([], "2026-10-31", 250), [250]);
   });
 });

@@ -7,6 +7,7 @@ import { cn, formatArs, formatDateAr, formatPesos } from "@/lib/utils";
 import {
   filterPatrimonioSeries,
   netWorthDeltas,
+  sparklineNetWorths,
   usableFxRate,
   type PatrimonioPoint,
   type SeriesRange,
@@ -113,12 +114,13 @@ function netText(current: Current): string {
 export function PatrimonioGlance() {
   const { data, error } = usePatrimonio();
 
-  const spark: number[] = [];
-  if (data) {
-    const shown = filterPatrimonioSeries(data.series, "6m", data.current.date);
-    for (const point of shown) spark.push(point.netWorthArs);
-    if (data.current.netWorthArs != null) spark.push(data.current.netWorthArs);
-  }
+  const spark = data
+    ? sparklineNetWorths(
+        filterPatrimonioSeries(data.series, "6m", data.current.date),
+        data.current.date,
+        data.current.netWorthArs,
+      )
+    : [];
 
   if (error) {
     return <p className="text-sm text-[var(--err-text)]">{error}</p>;

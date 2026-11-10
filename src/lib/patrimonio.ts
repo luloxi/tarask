@@ -142,6 +142,26 @@ export function filterPatrimonioSeries(
   return sorted.filter((point) => point.date >= start && point.date <= today);
 }
 
+/**
+ * Sparkline y values: stored points, then live net worth.
+ * Same calendar day is one point (live replaces stored). One point per day.
+ */
+export function sparklineNetWorths(
+  series: readonly PatrimonioPoint[],
+  currentDate: string,
+  currentNet: number | null,
+): number[] {
+  const values = series.map((point) => point.netWorthArs);
+  if (currentNet == null || !Number.isFinite(currentNet)) return values;
+  const last = series[series.length - 1];
+  if (last && last.date === currentDate) {
+    values[values.length - 1] = currentNet;
+    return values;
+  }
+  values.push(currentNet);
+  return values;
+}
+
 export function historyStartsAt(points: PatrimonioPoint[]): string | null {
   if (points.length === 0) return null;
   return [...points].sort((a, b) => (a.date < b.date ? -1 : 1))[0].date;

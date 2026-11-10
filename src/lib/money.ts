@@ -32,21 +32,7 @@ export function parseBbvaAmount(raw: unknown): ParsedAmount | null {
   // Argentine format: 1.234.567,89  or US-like 1,234.56 (last separator wins)
   const negative = s.startsWith("-") || s.includes("-");
   s = s.replace(/-/g, "");
-
-  const lastComma = s.lastIndexOf(",");
-  const lastDot = s.lastIndexOf(".");
-  if (lastComma >= 0 && lastDot >= 0) {
-    if (lastComma > lastDot) {
-      // 1.234,56
-      s = s.replace(/\./g, "").replace(",", ".");
-    } else {
-      // 1,234.56
-      s = s.replace(/,/g, "");
-    }
-  } else if (s.includes(",")) {
-    // 1234,56
-    s = s.replace(/\./g, "").replace(",", ".");
-  }
+  s = normalizeGroupedNumber(s);
 
   const value = Number(s);
   if (!Number.isFinite(value)) return null;
@@ -55,6 +41,39 @@ export function parseBbvaAmount(raw: unknown): ParsedAmount | null {
     currency: isUsd ? "USD" : "ARS",
     value: negative ? -Math.abs(value) : value,
   };
+}
+
+/**
+ * Dots/commas as thousands vs decimal. Last mixed separator wins.
+ * Groups of three with no cents ("1.234.567", "$ 30.277") are pesos, not 1.234.
+ * "0.50" / "20.00" stay decimals. "0.123" is not thousands.
+ */
+function normalizeGroupedNumber(s: string): string {
+  const lastComma = s.lastIndexOf(",");
+  const lastDot = s.lastIndexOf(".");
+  if (lastComma >= 0 && lastDot >= 0) {
+    if (lastComma > lastDot) {
+      return s.replace(/\./g, "").replace(",", ".");
+    }
+    return s.replace(/,/g, "");
+  }
+  if (s.includes(",")) {
+    const parts = s.split(",");
+    if (isThousandGroups(parts)) return parts.join("");
+    return s.replace(",", ".");
+  }
+  if (s.includes(".")) {
+    const parts = s.split(".");
+    if (isThousandGroups(parts)) return parts.join("");
+  }
+  return s;
+}
+
+function isThousandGroups(parts: string[]): boolean {
+  if (parts.length < 2) return false;
+  const head = parts[0] ?? "";
+  if (!head || head === "0" || head.length > 3 || !/^\d+$/.test(head)) return false;
+  return parts.slice(1).every((p) => /^\d{3}$/.test(p));
 }
 
 /**

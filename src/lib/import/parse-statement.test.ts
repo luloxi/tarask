@@ -448,6 +448,15 @@ describe("amount formats", () => {
     assert.equal(parseBbvaAmount("$ 30.277,00")?.value, 30277);
     assert.equal(parseBbvaAmount("USD 20,00")?.currency, "USD");
   });
+
+  it("reads Argentine thousands without cents instead of NaN or a decimal", () => {
+    assert.equal(parseBbvaAmount("1.234.567")?.value, 1234567);
+    assert.equal(parseBbvaAmount("$ 30.277")?.value, 30277);
+    assert.equal(parseBbvaAmount("-1.234")?.value, -1234);
+    assert.equal(parseBbvaAmount("20.00")?.value, 20);
+    assert.equal(parseBbvaAmount("0.50")?.value, 0.5);
+    assert.equal(parseBbvaAmount("USD -102.48")?.value, -102.48);
+  });
 });
 
 describe("BBVA card fixtures", () => {

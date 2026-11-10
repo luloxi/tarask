@@ -187,6 +187,54 @@ describe("spending SQL", () => {
     assert.equal(Number(asideRow.total), 999);
   });
 
+  it("does not count own-account BBNK / TRANSF CLIENTE as spend", () => {
+    const db = openDb();
+    seedHome(db);
+    insertTx(db, { id: "cafe", date: "2026-06-10", desc: "CAFE", ars: "40" });
+    insertTx(db, {
+      id: "bbnk",
+      date: "2026-06-11",
+      desc: "TRANSFERENCIA BBNK 306333.80",
+      ars: "306333.80",
+      category: null,
+    });
+    insertTx(db, {
+      id: "cliente",
+      date: "2026-06-12",
+      desc: "BBVA CA$ TRANSF. CLIENTE CTA. CAP093 380138 5 Nro:00010008",
+      ars: "566000",
+      category: "cat-food",
+    });
+
+    const expense = expenseSql();
+    const visibility = { sql: "1 = 1", binds: [] as unknown[] };
+    const ars = spendingByCategoryQuery({
+      currency: "ARS",
+      today: "2026-06-15",
+      days: 90,
+      householdId: "h1",
+      expenseSql: expense,
+      visibilitySql: visibility.sql,
+      visibilityBinds: visibility.binds,
+    });
+    const arsRows = db.prepare(ars.sql).all(...(ars.params as never[])) as Array<{ category: string; total: number }>;
+    assert.equal(arsRows.length, 1);
+    assert.equal(arsRows[0]?.category, "Supermercado");
+    assert.equal(Number(arsRows[0]?.total), 40);
+
+    const aside = internalAsideQuery({
+      currency: "ARS",
+      today: "2026-06-15",
+      days: 90,
+      householdId: "h1",
+      visibilitySql: visibility.sql,
+      visibilityBinds: visibility.binds,
+      internalIdsJson: "[]",
+    });
+    const asideRow = db.prepare(aside.sql).get(...(aside.params as never[])) as { total: number };
+    assert.equal(Math.round(Number(asideRow.total) * 100), 87233380);
+  });
+
   it("buckets weeks on Monday", () => {
     const db = openDb();
     seedHome(db);

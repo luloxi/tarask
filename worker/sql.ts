@@ -18,11 +18,13 @@
  *   "Transferencia inmediata" and a bare "TRANSFERENCIA" stay spends unless
  *   the id is in the dup set. That set is Fiwind echo ids union internal
  *   transfers from `classifyTransferRows` (own-account id or an opposite
- *   incoming twin). A generic transfer with no payee still counts. Income
- *   uses the same data rule in `worker/income.ts`: the income twin drops a
- *   variable row only when both the label and the outgoing row are
- *   transfers (or own-account credits), not when any same-amount spend is
- *   nearby.
+ *   incoming twin). A generic transfer with no payee still counts.
+ *   Own-account labels already treated as internal on Consumos (BBNK self
+ *   move, TRANSF CLIENTE CTA/CAP) are bank accounting too — they must not
+ *   inflate dashboard / chart / mes-a-mes expense totals. Income uses the
+ *   same data rule in `worker/income.ts`: the income twin drops a variable
+ *   row only when both the label and the outgoing row are transfers (or
+ *   own-account credits), not when any same-amount spend is nearby.
  *   A numeric-only description (digits and dots) is not accounting by
  *   itself. Unpaired Fiwind numeric rows stay counted. JS
  *   `isBankAccountingEntry` still treats every amount-only tipo as
@@ -79,6 +81,27 @@ function fiwindDupClause(dupIds?: Iterable<string>): string {
   return `OR t.id IN (SELECT value FROM json_each('${literal}'))`;
 }
 
+/**
+ * Own-account labels that Consumos already treats as internal (visible,
+ * out of neta). Same clauses belong in bank accounting so dashboard /
+ * charts / mes-a-mes do not count them as gasto.
+ */
+const OWN_ACCOUNT_LABEL_SQL = `
+  OR (
+    upper(t.description_normalized) LIKE '%TRANSF%CLIENTE%'
+    AND (
+      upper(t.description_normalized) LIKE '%CTA%'
+      OR upper(t.description_normalized) LIKE '%CAP%'
+    )
+  )
+  OR (
+    upper(t.description_normalized) LIKE '%BBNK%'
+    AND (
+      upper(t.description_normalized) LIKE '%TRANSFERENCIA%'
+      OR upper(t.description_normalized) LIKE '%TRANSF %'
+    )
+  )`;
+
 const BANK_ACCOUNTING_BODY = `
   upper(t.description_normalized) LIKE '%CAMBIO DE MONEDA%'
   OR upper(t.description_normalized) LIKE '%CAMBIO MONEDA%'
@@ -129,7 +152,8 @@ const BANK_ACCOUNTING_BODY = `
   OR upper(trim(t.description_normalized)) IN (
     'COMPRA USD', 'COMPRA USDC', 'COMPRA USDT', 'COMPRA USDB',
     'VENTA USD', 'VENTA USDC', 'VENTA USDT', 'VENTA USDB'
-  )`;
+  )
+  ${OWN_ACCOUNT_LABEL_SQL}`;
 
 /**
  * Phrase list, plus ids already decided outside SQL (Fiwind echoes and
@@ -179,20 +203,7 @@ export const INTERNAL_VISIBLE_SQL = `(
   OR upper(trim(t.description_normalized)) GLOB 'VENTA ME *'
   OR upper(trim(t.description_normalized)) GLOB '* VENTA ME'
   OR upper(trim(t.description_normalized)) GLOB '* VENTA ME *'
-  OR (
-    upper(t.description_normalized) LIKE '%TRANSF%CLIENTE%'
-    AND (
-      upper(t.description_normalized) LIKE '%CTA%'
-      OR upper(t.description_normalized) LIKE '%CAP%'
-    )
-  )
-  OR (
-    upper(t.description_normalized) LIKE '%BBNK%'
-    AND (
-      upper(t.description_normalized) LIKE '%TRANSFERENCIA%'
-      OR upper(t.description_normalized) LIKE '%TRANSF %'
-    )
-  )
+  ${OWN_ACCOUNT_LABEL_SQL}
 )`;
 
 /**

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiGet } from "@/lib/api/client";
+import { DashboardSkeleton } from "@/components/ui";
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
@@ -26,8 +27,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (!ready) {
     return (
-      <div className="flex flex-1 items-center justify-center py-24 text-sm text-[var(--muted-fg)]">
-        Cargando…
+      <div className="mx-auto w-full max-w-5xl flex-1 px-4 pt-[max(1.25rem,env(safe-area-inset-top))] md:px-6 md:pt-8">
+        <DashboardSkeleton />
       </div>
     );
   }

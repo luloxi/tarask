@@ -102,6 +102,7 @@ export function TotalSpendChart({
     x: scaleX(i, totals.length, chartW, PAD),
     y: scaleY(t.amountArs, max, chartH, PAD),
   }));
+  const labelStep = Math.max(1, Math.ceil(totals.length / (W < 520 ? 5 : 8)));
 
   const gridYs = [0, 0.25, 0.5, 0.75, 1].map((f) => ({
     y: PAD.top + chartH * (1 - f),
@@ -188,15 +189,17 @@ export function TotalSpendChart({
               onMouseEnter={() => setHover(i)}
               onMouseLeave={() => setHover(null)}
             />
-            <text
-              x={p.x}
-              y={H - 10}
-              textAnchor="middle"
-              fill="var(--chart-axis)"
-              fontSize={AXIS_FONT}
-            >
-              {formatPeriodShort(p.period)}
-            </text>
+            {i % labelStep === 0 ? (
+              <text
+                x={p.x}
+                y={H - 10}
+                textAnchor="middle"
+                fill="var(--chart-axis)"
+                fontSize={AXIS_FONT}
+              >
+                {formatPeriodShort(p.period)}
+              </text>
+            ) : null}
           </g>
         ))}
 
@@ -323,7 +326,7 @@ export function CategoryLinesChart({
               key={c.slug}
               type="button"
               onClick={() => toggle(c.slug)}
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 py-1 text-[13px] transition md:min-h-9"
+              className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-[13px] transition md:min-h-9"
               style={{
                 borderColor: on ? color : undefined,
                 backgroundColor: on ? tint(color, 14) : undefined,
@@ -400,6 +403,7 @@ export function CategoryLinesChart({
               periods.length <= 1
                 ? chartW / 2
                 : chartW / (periods.length - 1) / 2;
+            const catLabelStep = Math.max(1, Math.ceil(periods.length / (W < 520 ? 5 : 8)));
             return (
               <g key={p}>
                 <rect
@@ -410,15 +414,17 @@ export function CategoryLinesChart({
                   fill="transparent"
                   onMouseEnter={() => onHoverIndex(i)}
                 />
-                <text
-                  x={x}
-                  y={H - 10}
-                  textAnchor="middle"
-                  fill="var(--chart-axis)"
-              fontSize={AXIS_FONT}
-                >
-                  {formatPeriodShort(p)}
-                </text>
+                {i % catLabelStep === 0 ? (
+                  <text
+                    x={x}
+                    y={H - 10}
+                    textAnchor="middle"
+                    fill="var(--chart-axis)"
+                    fontSize={AXIS_FONT}
+                  >
+                    {formatPeriodShort(p)}
+                  </text>
+                ) : null}
               </g>
             );
           })}
@@ -440,7 +446,7 @@ export function CategoryLinesChart({
 
         {hover && periods[hover.i] && (
           <div
-            className="pointer-events-none absolute z-10 min-w-[200px] rounded-xl border border-[var(--chart-tip-border)] bg-[var(--chart-tip-bg)] p-2.5 text-[13px] text-[var(--chart-tip-fg)] shadow-lg"
+            className="pointer-events-none absolute z-10 w-[min(16rem,calc(100%-0.5rem))] max-w-full rounded-xl border border-[var(--chart-tip-border)] bg-[var(--chart-tip-bg)] p-2.5 text-[13px] text-[var(--chart-tip-fg)] shadow-lg"
             style={{
               left: `min(${(scaleX(hover.i, periods.length, chartW, PAD) / W) * 100}%, calc(100% - 215px))`,
               top: 8,
@@ -458,14 +464,14 @@ export function CategoryLinesChart({
                     key={it.slug}
                     className="flex items-center justify-between gap-3"
                   >
-                    <span className="flex items-center gap-1.5">
+                    <span className="flex min-w-0 items-center gap-1.5">
                       <span
                         className="h-2 w-2 shrink-0 rounded-full"
                         style={{ backgroundColor: it.color }}
                       />
-                      {it.name}
+                      <span className="truncate">{it.name}</span>
                     </span>
-                    <span className="tabular-nums font-medium">
+                    <span className="lc-amount shrink-0 font-medium">
                       {formatArs(it.amount)}
                     </span>
                   </li>

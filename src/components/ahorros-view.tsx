@@ -245,7 +245,7 @@ export function AhorrosView() {
   return (
     <PageStack className="!space-y-4">
       <div className="flex items-start justify-between gap-2">
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-[1.6rem] font-semibold leading-tight tracking-tight">Ahorros</h1>
           <p className="text-xs text-[var(--muted-fg)]">
             Wallets y bancos · solo vos ves esto
@@ -258,7 +258,7 @@ export function AhorrosView() {
           type="button"
           onClick={() => void load(true)}
           disabled={refreshing}
-          className="inline-flex min-h-10 min-w-10 cursor-pointer items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 text-[11px] font-medium text-[var(--muted-fg)] transition hover:text-[var(--foreground)] disabled:opacity-60"
+          className="inline-flex min-h-10 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 text-[11px] font-medium text-[var(--muted-fg)] transition hover:text-[var(--foreground)] disabled:opacity-60"
         >
           <RefreshCw
             className={cn("h-3.5 w-3.5", refreshing && "animate-spin")}
@@ -272,7 +272,7 @@ export function AhorrosView() {
       {summary && (
         <Surface className="!p-4">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <p className="text-3xl font-semibold tabular-nums tracking-tight text-[var(--foreground)]">
+            <p className="lc-amount text-3xl font-semibold tracking-tight text-[var(--foreground)]">
               {summary.netArs == null ? "Sin cotización" : formatArs(Math.round(summary.netArs))}
             </p>
             <p className="text-[11px] text-[var(--muted-fg)]">neto en pesos</p>

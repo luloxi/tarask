@@ -95,7 +95,7 @@ export function CargasView() {
           <button
             type="button"
             onClick={() => void load()}
-            className="lc-btn lc-btn-ghost !px-3 !py-2 text-sm"
+            className="lc-btn lc-btn-ghost cursor-pointer !px-3 !py-2 text-sm"
             disabled={loading}
           >
             {loading ? (
@@ -133,7 +133,7 @@ export function CargasView() {
             type="button"
             onClick={() => setFilter(f.id)}
             className={cn(
-              "min-h-10 rounded-full px-3 py-2 text-xs font-medium transition",
+              "min-h-10 cursor-pointer rounded-full px-3 py-2 text-xs font-medium transition",
               filter === f.id
                 ? "bg-[var(--brand-soft)] text-[var(--brand-fg)]"
                 : "bg-[var(--surface-muted)] text-[var(--muted-fg)] hover:text-[var(--foreground)]",

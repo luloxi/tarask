@@ -221,21 +221,28 @@ body {
   outline-offset: 2px;
 }
 
-:where(
-  a,
-  button,
-  summary,
-  select,
-  label,
-  [role="button"],
-  [role="link"],
-  [role="tab"],
-  [role="menuitem"]
-) {
+/* Sin :where(): esa pseudo-clase tiene especificidad 0 y Tailwind
+ * deja `button { cursor: default }`. Estos selectores sí ganan. */
+a,
+button,
+summary,
+select,
+label,
+[role="button"],
+[role="link"],
+[role="tab"],
+[role="menuitem"],
+[role="switch"],
+[role="option"],
+input[type="checkbox"],
+input[type="radio"],
+input[type="file"] {
   cursor: pointer;
 }
 
-:where(button:disabled, select:disabled, [aria-disabled="true"]) {
+button:disabled,
+select:disabled,
+[aria-disabled="true"] {
   cursor: not-allowed;
 }
 
@@ -507,6 +514,7 @@ textarea::placeholder {
   gap: 0.4rem;
   border-radius: 9999px;
   min-height: 2.75rem;
+  cursor: pointer;
   padding: 0.5rem 1.15rem;
   font-size: 0.9375rem;
   font-weight: 600;
@@ -591,6 +599,7 @@ html.dark .lc-btn-primary {
   align-items: center;
   gap: 0.35rem;
   min-height: 2.5rem;
+  cursor: pointer;
   padding: 0.4rem 0.95rem;
   border-radius: 9999px;
   border: 1px solid var(--border);
@@ -643,6 +652,7 @@ html.dark .lc-chip[data-active="true"] {
   justify-content: center;
   gap: 0.35rem;
   min-height: 2.5rem;
+  cursor: pointer;
   padding: 0.4rem 0.95rem;
   border-radius: 9999px;
   border: 1px solid var(--border);

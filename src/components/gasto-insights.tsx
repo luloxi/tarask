@@ -78,7 +78,9 @@ export function GastoInsights({ ownership }: { ownership: Ownership }) {
           </p>
         </div>
         {spend.error ? <p className="text-sm text-[var(--err-text)]">{spend.error}</p> : null}
-        {spend.data ? (
+        {spend.loading && !spend.data ? (
+          <p className="text-sm text-[var(--muted-fg)]">Cargando…</p>
+        ) : spend.data && spend.data.rows.some((row) => row.total > 0) ? (
           <>
             <p className="text-[1.35rem] font-semibold tabular-nums">
               {formatCurrencyAmount(spend.data.currency, spend.data.total)}
@@ -95,8 +97,11 @@ export function GastoInsights({ ownership }: { ownership: Ownership }) {
               </p>
             ) : null}
           </>
-        ) : spend.loading ? (
-          <p className="text-sm text-[var(--muted-fg)]">Cargando…</p>
+        ) : !spend.error ? (
+          <InsightsEmpty
+            title="Todavía no hay gastos en 90 días"
+            description={`Cuando importes o cargues movimientos, acá se arma el recorte por categoría en ${currency}.`}
+          />
         ) : null}
       </Surface>
       <Surface className="space-y-3">
@@ -111,7 +116,9 @@ export function GastoInsights({ ownership }: { ownership: Ownership }) {
           onChange={setGranularity}
         />
         {series.error ? <p className="text-sm text-[var(--err-text)]">{series.error}</p> : null}
-        {series.data ? (
+        {series.loading && !series.data ? (
+          <p className="text-sm text-[var(--muted-fg)]">Cargando…</p>
+        ) : series.data && series.data.rows.length > 0 ? (
           <>
             <MoneyLineChart
               ariaLabel="Evolución del gasto"
@@ -125,11 +132,23 @@ export function GastoInsights({ ownership }: { ownership: Ownership }) {
             />
             <SeriesTable rows={series.data.rows} currency={series.data.currency} granularity={series.data.granularity} />
           </>
-        ) : series.loading ? (
-          <p className="text-sm text-[var(--muted-fg)]">Cargando…</p>
+        ) : !series.error ? (
+          <InsightsEmpty
+            title="Todavía no hay curva de gasto"
+            description={`No hay movimientos en ${currency} para esta vista. Cambiá la moneda o la granularidad, o cargá un resumen.`}
+          />
         ) : null}
       </Surface>
     </div>
+  );
+}
+
+function InsightsEmpty({ title, description }: { title: string; description: string }) {
+  return (
+    <p className="rounded-2xl border border-dashed border-[var(--border)] px-3 py-4 text-[15px] leading-snug text-[var(--muted-fg)]">
+      <span className="block font-semibold text-[var(--foreground)]">{title}</span>
+      <span className="mt-1 block">{description}</span>
+    </p>
   );
 }
 

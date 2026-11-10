@@ -18,6 +18,33 @@ const AMOUNT_RE = /^-?(?:\d+|\d+\.\d+)$/;
 /** Reject junk that would become Infinity or wipe a stored amount. */
 const MAX_AMOUNT = 1_000_000_000_000;
 
+/**
+ * Manual / API / MCP amounts. Placeholder in the form is "0,00".
+ * Last mixed separator wins (1.234,56 AR vs 1,234.56 US). A lone comma
+ * is decimal. "1e6" / Infinity stay invalid.
+ */
+function normalizeManualAmount(raw: string): string {
+  let s = raw.trim().replace(/\s/g, "");
+  if (!s) return s;
+  if (s.startsWith("(") && s.endsWith(")") && s.length > 2) {
+    s = `-${s.slice(1, -1)}`;
+  }
+  s = s.replace(/^\$/, "").replace(/\$$/, "");
+  const negative = s.startsWith("-") || s.endsWith("-");
+  s = s.replace(/-/g, "");
+  const lastComma = s.lastIndexOf(",");
+  const lastDot = s.lastIndexOf(".");
+  if (lastComma >= 0 && lastDot >= 0) {
+    s =
+      lastComma > lastDot
+        ? s.replace(/\./g, "").replace(",", ".")
+        : s.replace(/,/g, "");
+  } else if (lastComma >= 0) {
+    s = s.replace(",", ".");
+  }
+  return negative ? `-${s}` : s;
+}
+
 export function parseExpenseAmount(
   value: unknown,
 ): { ok: true; amount: number | null } | { ok: false } {
@@ -29,8 +56,9 @@ export function parseExpenseAmount(
   if (typeof value !== "string") return { ok: false };
   const trimmed = value.trim();
   if (!trimmed) return { ok: true, amount: null };
-  if (!AMOUNT_RE.test(trimmed)) return { ok: false };
-  const n = Number(trimmed);
+  const normalized = normalizeManualAmount(trimmed);
+  if (!AMOUNT_RE.test(normalized)) return { ok: false };
+  const n = Number(normalized);
   if (!Number.isFinite(n) || Math.abs(n) > MAX_AMOUNT) return { ok: false };
   return { ok: true, amount: Math.abs(n) };
 }

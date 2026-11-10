@@ -28,8 +28,16 @@ describe("manual expense validation", () => {
     assert.deepEqual(parseExpenseAmount("10.50"), { ok: true, amount: 10.5 });
     assert.equal(parseExpenseAmount("Infinity").ok, false);
     assert.equal(parseExpenseAmount("1e6").ok, false);
-    assert.equal(parseExpenseAmount("10,50").ok, false);
     assert.equal(parseExpenseAmount(Number.NaN).ok, false);
+  });
+
+  it("reads Argentine decimals and thousands (form placeholder 0,00)", () => {
+    assert.deepEqual(parseExpenseAmount("10,50"), { ok: true, amount: 10.5 });
+    assert.deepEqual(parseExpenseAmount("1.234,56"), { ok: true, amount: 1234.56 });
+    assert.deepEqual(parseExpenseAmount("$ 30.277,00"), { ok: true, amount: 30277 });
+    assert.deepEqual(parseExpenseAmount("(10,50)"), { ok: true, amount: 10.5 });
+    assert.deepEqual(parseExpenseAmount("-1.234,56"), { ok: true, amount: 1234.56 });
+    assert.deepEqual(parseExpenseAmount("1,234.56"), { ok: true, amount: 1234.56 });
   });
 
   it("stores cents as text and fingerprints without a clock", () => {

@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useJsonResource } from "@/hooks/use-json-resource";
-import { Trash2 } from "lucide-react";
+import { Receipt, Trash2 } from "lucide-react";
 import { formatArs, formatDateAr } from "@/lib/utils";
+import { EmptyState, LoadingBlock } from "@/components/ui";
 
 type Receipt = {
   id: string;
@@ -97,11 +98,17 @@ export function ReceiptsList({
     return <p className="text-sm text-red-600">{error}</p>;
   }
 
+  if (resource.loading && receipts.length === 0) {
+    return <LoadingBlock label="Cargando tickets…" />;
+  }
+
   if (receipts.length === 0) {
     return (
-      <p className="text-sm text-zinc-500">
-        Todavía no hay tickets cargados.
-      </p>
+      <EmptyState
+        icon={<Receipt className="h-7 w-7" />}
+        title="Todavía no hay tickets"
+        description="Cuando alguien suba un ticket de súper, aparece acá con los ítems y el total."
+      />
     );
   }
 
@@ -114,7 +121,7 @@ export function ReceiptsList({
             type="button"
             disabled={busy !== null}
             onClick={() => void removeAll()}
-            className="inline-flex min-h-10 items-center text-xs font-medium text-red-600 hover:underline disabled:opacity-50"
+            className="inline-flex min-h-10 cursor-pointer items-center text-xs font-medium text-red-600 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
           >
             {busy === "all" ? "Borrando…" : "Borrar todos"}
           </button>
@@ -129,7 +136,7 @@ export function ReceiptsList({
             <button
               type="button"
               onClick={() => setOpenId(openId === r.id ? null : r.id)}
-              className="flex min-h-10 min-w-0 flex-1 items-center text-left"
+              className="flex min-h-10 min-w-0 flex-1 cursor-pointer items-center text-left"
             >
               <div className="font-medium">
                 {r.merchantName || "Ticket"}
@@ -149,7 +156,7 @@ export function ReceiptsList({
                 title="Borrar ticket"
                 disabled={busy === r.id}
                 onClick={() => void removeOne(r.id)}
-                className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg text-zinc-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-950/40"
+                className="inline-flex min-h-10 min-w-10 cursor-pointer items-center justify-center rounded-lg text-zinc-400 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-red-950/40"
               >
                 <Trash2 className="h-4 w-4" />
               </button>

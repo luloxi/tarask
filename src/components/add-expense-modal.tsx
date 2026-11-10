@@ -125,7 +125,7 @@ function ChoiceRow({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "group flex w-full items-center gap-3.5 rounded-2xl border px-3.5 py-3.5 text-left transition active:scale-[0.99] disabled:opacity-60",
+        "group flex w-full cursor-pointer items-center gap-3.5 rounded-2xl border px-3.5 py-3.5 text-left transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60",
         primary
           ? "border-[var(--brand)]/35 bg-[var(--brand-soft)] hover:border-[var(--brand)]/55"
           : "border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)]",
@@ -700,7 +700,7 @@ function AddExpenseForm({
                   })
                 }
                 className={cn(
-                  "flex w-full items-center justify-between rounded-xl border px-3.5 py-2.5 text-sm",
+                  "flex w-full cursor-pointer items-center justify-between rounded-xl border px-3.5 py-2.5 text-sm",
                   complex
                     ? "border-[var(--brand)]/40 bg-[var(--brand-soft)]"
                     : "border-[var(--border)]",
@@ -755,7 +755,7 @@ function AddExpenseForm({
                                 : list.filter((_, i) => i !== idx),
                             )
                           }
-                          className="p-1.5 text-[var(--muted-fg)] hover:text-red-600"
+                          className="cursor-pointer p-1.5 text-[var(--muted-fg)] hover:text-red-600"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>

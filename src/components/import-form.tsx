@@ -270,13 +270,17 @@ export function ImportForm({
               }
               void importFiles(list);
             }}
+            onClick={(e) => {
+              if ((e.target as HTMLElement).closest("button")) return;
+              inputRef.current?.click();
+            }}
             className={cn(
-              "flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-center transition-all",
+              "flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-center transition-all",
               compact ? "" : "max-w-md",
               dragOver
                 ? "scale-[1.01] border-[var(--brand)] bg-[var(--brand-soft)] shadow-inner"
                 : "border-[var(--brand)]/35 bg-[var(--surface)]",
-              loading && "pointer-events-none opacity-80",
+              loading && "pointer-events-none cursor-default opacity-80",
             )}
           >
             {loading ? (

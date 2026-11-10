@@ -553,7 +553,7 @@ export function CompartidoView() {
                         <button
                           type="button"
                           onClick={() => toggleCat(c.slug)}
-                          className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-[var(--surface-muted)]"
+                          className="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition hover:bg-[var(--surface-muted)]"
                         >
                           <ChevronDown
                             className={cn(
@@ -628,7 +628,7 @@ export function CompartidoView() {
                                       <button
                                         type="button"
                                         onClick={() => toggleTicket(e.id)}
-                                        className="flex w-full items-center justify-center gap-1 border-t border-[var(--border)] py-1.5 text-xs font-medium text-[var(--brand-fg)]"
+                                        className="flex w-full cursor-pointer items-center justify-center gap-1 border-t border-[var(--border)] py-1.5 text-xs font-medium text-[var(--brand-fg)]"
                                       >
                                         {ticketShown ? (
                                           <ChevronDown className="h-3.5 w-3.5" />

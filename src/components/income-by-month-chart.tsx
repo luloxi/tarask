@@ -54,7 +54,7 @@ export function IncomeByMonthChart({ refreshKey = 0 }: { refreshKey?: number }) 
       {resource.error ? <p className="text-sm text-[var(--err-text)]">{resource.error}</p> : null}
       {data ? (
         <>
-          <p className="text-[1.35rem] font-semibold tabular-nums">
+          <p className="lc-amount text-[1.35rem] font-semibold">
             {formatCurrencyAmount(data.currency, data.total)}
           </p>
           {data.excludedCount > 0 ? (
@@ -70,8 +70,15 @@ export function IncomeByMonthChart({ refreshKey = 0 }: { refreshKey?: number }) 
           />
         </>
       ) : resource.loading ? (
-        <p className="text-sm text-[var(--muted-fg)]">Cargando…</p>
-      ) : null}
+        <div className="space-y-2" role="status" aria-live="polite" aria-label="Cargando ingresos">
+          <div className="skeleton h-7 w-32" />
+          <div className="skeleton h-40 w-full" />
+        </div>
+      ) : (
+        <p className="rounded-2xl border border-dashed border-[var(--border)] px-3 py-4 text-[15px] text-[var(--muted-fg)]">
+          Todavía no hay ingresos para graficar.
+        </p>
+      )}
     </Surface>
   );
 }

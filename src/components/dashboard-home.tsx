@@ -241,12 +241,12 @@ function DetailRow({
       className="group block rounded-[1.25rem] border border-[var(--border)] bg-[var(--surface)] px-4 py-3.5 shadow-[var(--card-shadow)] transition active:scale-[0.99]"
     >
       <div className="flex min-h-7 items-center justify-between gap-3">
-        <p className="text-[15px] font-semibold">{label}</p>
-        <div className="flex min-w-0 items-center gap-1.5">
+        <p className="min-w-0 truncate text-[15px] font-semibold">{label}</p>
+        <div className="flex min-w-0 max-w-[58%] items-center justify-end gap-1.5">
           {value && (
             <span
               className={cn(
-                "truncate text-[15px] font-semibold tabular-nums",
+                "lc-amount text-right text-[15px] font-semibold",
                 tone === "ok" && "text-[var(--ok-text)]",
                 tone === "err" && "text-[var(--err-text)]",
               )}
@@ -257,7 +257,7 @@ function DetailRow({
           <TapHint />
         </div>
       </div>
-      {note && <p className="mt-0.5 text-[13px] text-[var(--muted-fg)]">{note}</p>}
+      {note && <p className="mt-0.5 min-w-0 text-[13px] leading-snug text-[var(--muted-fg)]">{note}</p>}
       {children}
     </Link>
   );
@@ -640,20 +640,20 @@ export function DashboardHome({
 
   return (
     <div className="animate-fade-up mx-auto flex w-full max-w-xl flex-col gap-4">
-      <header className="flex items-end justify-between gap-3">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <h1 className="truncate text-[1.6rem] font-semibold leading-tight tracking-tight">
+          <h1 className="text-[1.6rem] font-semibold leading-tight tracking-tight break-words">
             Hola, {firstName}
           </h1>
           {householdName ? (
-            <p className="truncate text-[15px] text-[var(--muted-fg)]">{householdName}</p>
+            <p className="text-[15px] leading-snug text-[var(--muted-fg)] break-words">{householdName}</p>
           ) : null}
         </div>
         {onPeriodChange ? (
           <select
             value={period}
             onChange={(e) => onPeriodChange(e.target.value)}
-            className="lc-input max-w-[12rem] shrink-0 rounded-full !py-0 text-[15px] font-medium"
+            className="lc-input w-fit max-w-full rounded-full !px-3 !py-0 text-[15px] font-medium"
             aria-label="Mes"
           >
             {(periods && periods.length > 0 ? periods : [period]).map((p) => (
@@ -679,7 +679,7 @@ export function DashboardHome({
         </div>
         {hasSavings ? (
           <>
-            <p className="lc-glow mt-1 text-[2.6rem] font-semibold leading-none tabular-nums tracking-[-0.03em]">
+            <p className="lc-amount lc-glow mt-1 text-[clamp(1.7rem,8.5vw,2.6rem)] font-semibold leading-none tracking-[-0.03em]">
               {formatPesos(haveAmount)}
             </p>
             <p className="mt-2 text-[15px] text-[var(--muted-fg)]">
@@ -712,7 +712,7 @@ export function DashboardHome({
           <>
             <p
               className={cn(
-                "mt-1 text-[2.1rem] font-semibold leading-tight tabular-nums tracking-[-0.03em]",
+                "lc-amount mt-1 text-[clamp(1.5rem,7.5vw,2.1rem)] font-semibold leading-tight tracking-[-0.03em]",
                 pop && "lc-amount-pop",
               )}
             >

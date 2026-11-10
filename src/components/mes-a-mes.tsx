@@ -1201,7 +1201,7 @@ function TotalRow({
           "bg-[var(--a2)] text-[var(--on-accent)]",
       )}
     >
-      <span className="min-w-0">
+      <span className="min-w-0 flex-1">
         <span className="block text-xs font-semibold uppercase tracking-wide opacity-90">
           {label}
         </span>
@@ -1211,7 +1211,7 @@ function TotalRow({
           </span>
         ) : null}
       </span>
-      <span className="shrink-0 text-sm font-bold tabular-nums tracking-tight">
+      <span className="lc-amount max-w-[58%] text-right text-sm font-bold tracking-tight">
         {value}
       </span>
     </div>

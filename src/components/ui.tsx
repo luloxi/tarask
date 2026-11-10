@@ -203,7 +203,7 @@ export function LoadingBlock({ label = "Cargando…" }: { label?: string }) {
   );
 }
 
-/** Resumen: tres bloques grandes y una lista corta. */
+/** Resumen: cabecera + tarjetas a todo el ancho, como la pantalla real. */
 export function DashboardSkeleton() {
   return (
     <div
@@ -212,12 +212,16 @@ export function DashboardSkeleton() {
       aria-live="polite"
       aria-label="Cargando resumen"
     >
-      <div className="skeleton h-5 w-40" />
-      <div className="skeleton h-36 w-full !rounded-[1.5rem]" />
-      <div className="grid grid-cols-2 gap-3">
-        <div className="skeleton h-32 w-full !rounded-[1.5rem]" />
-        <div className="skeleton h-32 w-full !rounded-[1.5rem]" />
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="skeleton h-7 w-48" />
+          <div className="skeleton h-4 w-28" />
+        </div>
+        <div className="skeleton h-9 w-36 !rounded-full" />
       </div>
+      <div className="skeleton h-36 w-full !rounded-[1.5rem]" />
+      <div className="skeleton h-32 w-full !rounded-[1.5rem]" />
+      <div className="skeleton h-40 w-full !rounded-[1.5rem]" />
       <div className="skeleton h-28 w-full !rounded-[1.5rem]" />
     </div>
   );

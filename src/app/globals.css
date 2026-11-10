@@ -203,6 +203,14 @@ body {
   overflow-x: clip;
 }
 
+/* Montos largos: bajan de línea en 375px en vez de empujar el layout. */
+.lc-amount {
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
 ::selection {
   background: color-mix(in srgb, var(--accent) 30%, transparent);
   color: var(--text);

@@ -34,13 +34,16 @@ export function NinetyDaySpend() {
   return (
     <section className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--card-shadow)]">
       <div className="flex items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0 flex-1">
           <h2 className="text-[15px] font-semibold">Últimos 90 días</h2>
-          <p className="mt-0.5 text-[13px] text-[var(--muted-fg)]">
+          <p className="mt-0.5 text-[13px] leading-snug text-[var(--muted-fg)]">
             Gastos por categoría. Una moneda por vez. Las transferencias internas no entran.
           </p>
         </div>
-        <Link href="/consumos?tab=charts" className="shrink-0 text-[13px] font-medium text-[var(--brand-fg)]">
+        <Link
+          href="/consumos?tab=charts"
+          className="shrink-0 whitespace-nowrap pt-0.5 text-[13px] font-medium text-[var(--brand-fg)]"
+        >
           Ver evolución
         </Link>
       </div>
@@ -48,24 +51,34 @@ export function NinetyDaySpend() {
         <ChoiceRow label="Moneda" value={currency} options={CURRENCY_OPTIONS} onChange={setCurrency} />
       </div>
       {resource.loading && !data ? (
-        <p className="mt-4 text-[15px] text-[var(--muted-fg)]">Cargando…</p>
+        <div className="mt-4 space-y-3" role="status" aria-live="polite" aria-label="Cargando gastos">
+          <div className="skeleton h-7 w-36" />
+          <div className="skeleton mx-auto h-40 w-40 !rounded-full" />
+          <div className="skeleton h-4 w-3/4" />
+        </div>
       ) : null}
       {resource.error ? (
         <p className="mt-4 text-[15px] text-[var(--err-text)]">{resource.error}</p>
       ) : null}
       {data ? (
-        <div className="mt-4 space-y-3">
-          <p className="text-[1.4rem] font-semibold tabular-nums tracking-tight">
-            {formatCurrencyAmount(data.currency, data.total)}
-          </p>
-          <PieChart slices={data.rows.map((row) => ({ label: row.category, value: row.total }))} />
-          <Legend items={data.rows.filter((row) => row.total > 0).map((row) => ({ name: row.category }))} />
-          {data.internal.count > 0 ? (
-            <p className="text-[13px] text-[var(--muted-fg)]">
-              Transferencias internas: {formatCurrencyAmount(data.currency, data.internal.total)}. No entran en el total.
+        data.rows.some((row) => row.total > 0) ? (
+          <div className="mt-4 space-y-3">
+            <p className="lc-amount text-[1.4rem] font-semibold tracking-tight">
+              {formatCurrencyAmount(data.currency, data.total)}
             </p>
-          ) : null}
-        </div>
+            <PieChart slices={data.rows.map((row) => ({ label: row.category, value: row.total }))} />
+            <Legend items={data.rows.filter((row) => row.total > 0).map((row) => ({ name: row.category }))} />
+            {data.internal.count > 0 ? (
+              <p className="text-[13px] text-[var(--muted-fg)]">
+                Transferencias internas: {formatCurrencyAmount(data.currency, data.internal.total)}. No entran en el total.
+              </p>
+            ) : null}
+          </div>
+        ) : (
+          <p className="mt-4 rounded-2xl border border-dashed border-[var(--border)] px-3 py-4 text-[15px] leading-snug text-[var(--muted-fg)]">
+            Todavía no hay gastos en 90 días. Cuando importes o cargues movimientos, acá se arma el recorte por categoría.
+          </p>
+        )
       ) : null}
     </section>
   );

@@ -6,7 +6,7 @@ import type { Currency } from "@/lib/stats/currency";
 import { formatCurrencyAmount, formatDateAr, todayDateAr } from "@/lib/utils";
 import { SectionNav } from "@/components/section-nav";
 import { CURRENCY_OPTIONS, ChoiceRow, Legend, MoneyLineChart } from "@/components/money-charts";
-import { PageHeader, PageStack, Surface } from "@/components/ui";
+import { EmptyState, LoadingBlock, PageHeader, PageStack, Surface } from "@/components/ui";
 
 type BalanceResponse = {
   today: string;
@@ -53,8 +53,14 @@ export function SaldosView() {
         description="Último saldo de cada cuenta. ARS, USDT y USD se muestran aparte, sin conversión. Lo que ves en Tenés sigue saliendo de Ahorros."
       />
       <SectionNav section="patrimonio" />
-      {resource.loading && !data ? <p className="text-[15px] text-[var(--muted-fg)]">Cargando…</p> : null}
+      {resource.loading && !data ? <LoadingBlock label="Cargando saldos…" /> : null}
       {resource.error ? <p className="text-[15px] text-[var(--err-text)]">{resource.error}</p> : null}
+      {!resource.loading && !resource.error && !data ? (
+        <EmptyState
+          title="Todavía no hay saldos"
+          description="Cuando cargues un saldo de cuenta, aparece acá."
+        />
+      ) : null}
       {data ? (
         <>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -63,7 +69,7 @@ export function SaldosView() {
               return (
                 <Surface key={code} className="!p-4">
                   <p className="text-[13px] font-medium text-[var(--muted-fg)]">{code}</p>
-                  <p className="mt-1 text-[1.25rem] font-semibold tabular-nums">
+                  <p className="lc-amount mt-1 text-[1.25rem] font-semibold">
                     {found ? formatCurrencyAmount(code, found.total) : "Sin datos"}
                   </p>
                 </Surface>
@@ -83,7 +89,7 @@ export function SaldosView() {
                         {row.currency} · {formatDateAr(row.date)} · {row.source === "routine" ? "Rutina" : "Manual"}
                       </p>
                     </div>
-                    <p className="shrink-0 font-semibold tabular-nums">
+                    <p className="lc-amount max-w-[48%] shrink-0 text-right font-semibold">
                       {formatCurrencyAmount(row.currency as Currency, row.amount)}
                     </p>
                   </li>

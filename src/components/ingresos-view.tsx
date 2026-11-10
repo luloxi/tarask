@@ -339,7 +339,7 @@ export function IngresosView() {
                         {formatDateAr(r.date)}
                       </p>
                     </div>
-                    <div className="shrink-0 text-right text-sm font-semibold tabular-nums text-[var(--brand-fg)]">
+                    <div className="lc-amount max-w-[42%] shrink-0 text-right text-sm font-semibold text-[var(--brand-fg)]">
                       {r.amountArs != null && <div>{formatArs(r.amountArs)}</div>}
                       {r.amountUsd != null && (
                         <div
@@ -353,7 +353,7 @@ export function IngresosView() {
                     </div>
                     <button
                       type="button"
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-[var(--muted-fg)] hover:bg-[var(--surface-muted)] hover:text-red-600"
+                      className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[var(--muted-fg)] hover:bg-[var(--surface-muted)] hover:text-red-600"
                       aria-label="Borrar sueldo recurrente"
                       onClick={() => void remove(r.id)}
                     >
@@ -421,7 +421,7 @@ export function IngresosView() {
                       : " · variable"}
                   </p>
                 </div>
-                <div className="shrink-0 text-right text-sm font-semibold tabular-nums text-[var(--brand-fg)]">
+                <div className="lc-amount max-w-[42%] shrink-0 text-right text-sm font-semibold text-[var(--brand-fg)]">
                   {r.amountArs != null && <div>{formatArs(r.amountArs)}</div>}
                   {r.amountUsd != null && (
                     <div
@@ -436,7 +436,7 @@ export function IngresosView() {
                 {!r.expected && (
                   <button
                     type="button"
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-[var(--muted-fg)] hover:bg-[var(--surface-muted)] hover:text-red-600"
+                    className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[var(--muted-fg)] hover:bg-[var(--surface-muted)] hover:text-red-600"
                     aria-label="Borrar"
                     onClick={() => void remove(r.sourceId)}
                   >

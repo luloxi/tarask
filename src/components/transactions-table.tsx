@@ -1311,10 +1311,10 @@ export function TransactionsTable() {
                         {r.installment ? ` · cuota ${r.installment}` : ""}
                       </span>
                     </span>
-                    <span className="shrink-0 text-right">
-                      <span className="block text-[15px] font-semibold tabular-nums">{amountMain}</span>
+                    <span className="lc-amount max-w-[42%] shrink-0 text-right">
+                      <span className="block text-[15px] font-semibold">{amountMain}</span>
                       {amountSub && (
-                        <span className="block text-[12px] tabular-nums text-[var(--muted-fg)]">{amountSub}</span>
+                        <span className="block text-[12px] text-[var(--muted-fg)]">{amountSub}</span>
                       )}
                     </span>
                   </button>

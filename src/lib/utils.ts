@@ -49,6 +49,35 @@ export function formatCurrencyAmount(
 }
 
 /**
+ * Calendar Y-M-D from a stored date. ISO first so "2026-08-31" is not
+ * read as day 2026. Argentine DD/MM/YYYY also accepts "-" and "."
+ * (31-08-2026, 31.08.2026). Two-digit years: 00–99 → 2000–2099.
+ */
+function calendarYmd(date: string): { y: number; m: number; d: number } | null {
+  const s = date.trim();
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) {
+    const y = Number(iso[1]);
+    const m = Number(iso[2]);
+    const d = Number(iso[3]);
+    if (m >= 1 && m <= 12 && d >= 1 && d <= 31) return { y, m, d };
+    return null;
+  }
+  const dmy = s.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})(?:\s|$|T)/);
+  if (!dmy) return null;
+  let y = Number(dmy[3]);
+  if (y < 100) y += 2000;
+  const d = Number(dmy[1]);
+  const m = Number(dmy[2]);
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+  return { y, m, d };
+}
+
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+/**
  * Format a calendar date without timezone shift.
  * `new Date("2026-08-01")` is UTC midnight → previous day in AR (UTC-3).
  * We parse YYYY-MM-DD as a pure local calendar date.
@@ -56,9 +85,9 @@ export function formatCurrencyAmount(
 export function formatDateAr(date: Date | string | null | undefined): string {
   if (!date) return "—";
   if (typeof date === "string") {
-    const m = date.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (m) {
-      return `${m[3]}/${m[2]}/${m[1]}`;
+    const parts = calendarYmd(date);
+    if (parts) {
+      return `${pad2(parts.d)}/${pad2(parts.m)}/${parts.y}`;
     }
     const d = new Date(date);
     if (Number.isNaN(d.getTime())) return "—";
@@ -79,6 +108,8 @@ export function formatDateAr(date: Date | string | null | undefined): string {
 
 /** Calendar period YYYY-MM from a stored date string (no TZ). */
 export function periodFromDateString(date: string): string {
+  const parts = calendarYmd(date);
+  if (parts) return `${parts.y}-${pad2(parts.m)}`;
   const m = date.trim().match(/^(\d{4})-(\d{2})/);
   return m ? `${m[1]}-${m[2]}` : date.slice(0, 7);
 }

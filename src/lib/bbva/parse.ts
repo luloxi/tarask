@@ -59,16 +59,16 @@ function parseDate(raw: unknown): string | null {
     return ymd(raw.getUTCFullYear(), raw.getUTCMonth() + 1, raw.getUTCDate());
   }
   const s = String(raw).trim();
-  // DD/MM/YY or DD/MM/YYYY, optional time ("31/08/2026 19:56:54")
-  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s|$|T)/);
+  // ISO first: "2026-08-31" must not be read as day 2026.
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return ymd(Number(iso[1]), Number(iso[2]), Number(iso[3]));
+  // DD/MM/YY or DD/MM/YYYY — also "-" / "." (Fiwind "31-08-2026", "31.08.2026")
+  const m = s.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})(?:\s|$|T)/);
   if (m) {
     let year = Number(m[3]);
     if (year < 100) year += 2000;
     return ymd(year, Number(m[2]), Number(m[1]));
   }
-  // ISO date, optional time
-  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (iso) return ymd(Number(iso[1]), Number(iso[2]), Number(iso[3]));
   // Excel serial date as number
   if (typeof raw === "number") {
     const parsed = XLSX.SSF.parse_date_code(raw);

@@ -1167,28 +1167,6 @@ export function TransactionsTable() {
         />
       </div>
 
-      {linkedIogCount > 0 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-200/80 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-100">
-          <p className="min-w-0 flex-1">
-            <span className="font-semibold tabular-nums">{linkedIogCount}</span>
-            {" "}
-            vinculado{linkedIogCount === 1 ? "" : "s"} a Invoice IOG — no cuentan en la neta
-          </p>
-          <button
-            type="button"
-            onClick={() => setIogOnly((v) => !v)}
-            className={
-              iogOnly
-                ? "shrink-0 rounded-full bg-[var(--warn)] px-2.5 py-1 text-[11px] font-semibold text-[var(--on-accent)]"
-                : "shrink-0 rounded-full border border-amber-300/80 bg-white/70 px-2.5 py-1 text-[11px] font-semibold text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/60 dark:text-amber-100 dark:hover:bg-amber-900/50"
-            }
-            aria-pressed={iogOnly}
-          >
-            Solo IOG
-          </button>
-        </div>
-      )}
-
       {error && <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">{error}</p>}
       {reintegroPrompt ? (
         <ReintegroHogarToast

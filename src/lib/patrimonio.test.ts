@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   TRUSTED_DEBT_MONTHS,
+  appendSettledZero,
   applySettledDebtHistory,
   assetsEquivalent,
+  mergeStatementDebtHistory,
   filterPatrimonioSeries,
   historyNote,
   historyStartsAt,
@@ -148,6 +150,35 @@ describe("patrimonio series", () => {
     });
     assert.equal(empty.settled, false);
     assert.equal(empty.cardStatus, "sin_snapshot");
+  });
+
+  it("plots Visa statement totals then zeros on the settle date", () => {
+    const snaps = [point("2026-10-31", 500, 0)];
+    const merged = mergeStatementDebtHistory(
+      snaps,
+      [
+        { date: "2025-05-31", debtArs: 200, debtUsd: 0, debtKind: "statement_total" },
+        { date: "2026-06-30", debtArs: 40, debtUsd: 0, debtKind: "statement_total" },
+      ],
+      1400,
+    );
+    assert.equal(merged[0]?.date, "2025-05-31");
+    assert.equal(merged[0]?.debtArs, 200);
+    assert.equal(merged[0]?.source, "derived");
+    assert.equal(merged[0]?.debtKind, "statement_total");
+    assert.equal(merged[0]?.assetsArs, 0);
+    assert.equal(merged[1]?.date, "2026-06-30");
+    assert.equal(merged[1]?.debtArs, 40);
+    const last = merged[merged.length - 1];
+    assert.equal(last?.date, "2026-10-31");
+    assert.equal(last?.debtArs, 0);
+    assert.equal(last?.source, "snapshot");
+    const withZero = appendSettledZero(merged, "2026-07-15");
+    assert.equal(withZero.some((p) => p.date === "2026-07-15" && p.debtArs === 0), true);
+    const settled = applySettledDebtHistory(withZero, { settled: true, clearedOn: "2026-07-15" });
+    assert.equal(settled.find((p) => p.date === "2026-06-30")?.debtArs, 40);
+    assert.equal(settled.find((p) => p.date === "2026-07-15")?.debtArs, 0);
+    assert.equal(settled.find((p) => p.date === "2026-10-31")?.debtArs, 0);
   });
 
   it("zeros debt only on and after the settle date", () => {

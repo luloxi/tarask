@@ -1,14 +1,17 @@
 import { expenseAmountText, parseExpenseAmount } from "../src/lib/manual-expense";
 import {
   TRUSTED_DEBT_MONTHS,
+  appendSettledZero,
   applySettledDebtHistory,
   assetsEquivalent,
   historyNote,
   historyStartsAt,
+  mergeStatementDebtHistory,
   pricedNetWorth,
   readDebt,
   usableFxRate,
   type PatrimonioPoint,
+  type StatementDebtInput,
 } from "../src/lib/patrimonio";
 import type { SessionUser } from "./auth";
 import type { Env } from "./env";
@@ -448,7 +451,7 @@ async function patrimonioPayload(req: Request, env: Env, userId: string) {
   const fx = await loadFx();
   const rate = usableFxRate(fx.blue);
   const date = todayAr();
-  const [position, stored, debt] = await Promise.all([
+  const [position, stored, debt, visa] = await Promise.all([
     livePosition(env, userId, rate),
     env.DB.prepare(
       `SELECT date, assets_ars, assets_usd, debt_ars, debt_usd, net_worth_ars, fx_rate, source
@@ -469,12 +472,13 @@ async function patrimonioPayload(req: Request, env: Env, userId: string) {
         source: string;
       }>(),
     debtRow(env, userId),
+    visaStatementDebt(env, userId),
   ]);
   const reading = debtReading(debt);
   const clearedOn =
     debt?.cleared_at != null ? todayAr(new Date(Number(debt.cleared_at))) : null;
-  const series: PatrimonioPoint[] = applySettledDebtHistory(
-    (stored.results ?? []).map((row) => ({
+  const snapshots: PatrimonioPoint[] = (stored.results ?? [])
+    .map((row) => ({
       date: row.date,
       assetsArs: num(row.assets_ars),
       assetsUsd: num(row.assets_usd),
@@ -483,10 +487,16 @@ async function patrimonioPayload(req: Request, env: Env, userId: string) {
       netWorthArs: num(row.net_worth_ars),
       fxRate: row.fx_rate != null ? num(row.fx_rate) : null,
       source: snapshotSource(row.source),
-    })).reverse(),
-    { settled: reading.settled, clearedOn },
-  );
+    }))
+    .reverse();
+  const merged = mergeStatementDebtHistory(snapshots, visa, rate);
+  const withSettle = appendSettledZero(merged, reading.settled ? clearedOn : null);
+  const series: PatrimonioPoint[] = applySettledDebtHistory(withSettle, {
+    settled: reading.settled,
+    clearedOn,
+  });
   const starts = historyStartsAt(series);
+  const usesStatementTotals = series.some((point) => point.debtKind === "statement_total");
   const flujo = await monthlyFlow(req, env, userId, fx);
   return {
     current: {
@@ -504,10 +514,64 @@ async function patrimonioPayload(req: Request, env: Env, userId: string) {
     series,
     flujo,
     historyStartsAt: starts,
-    note: historyNote(starts),
+    note: historyNote(starts, { statementTotals: usesStatementTotals }),
     trustedMonths: TRUSTED_DEBT_MONTHS,
-    derived: false,
+    derived: series.some((point) => point.source === "derived"),
   };
+}
+
+/** Visa PDF / period xls. No closing-balance column: charges minus payments. */
+async function visaStatementDebt(env: Env, userId: string): Promise<StatementDebtInput[]> {
+  const res = await env.DB.prepare(
+    `SELECT s.id AS id, s.source AS source, s.file_name AS file_name, s.closed_at AS closed_at,
+            MAX(t.date) AS period_to,
+            SUM(CASE WHEN IFNULL(t.is_payment, 0) = 0 AND IFNULL(t.is_credit, 0) = 0
+                 THEN abs(CAST(IFNULL(t.amount_ars, '0') AS REAL)) ELSE 0 END) AS charge_ars,
+            SUM(CASE WHEN IFNULL(t.is_payment, 0) = 1 OR IFNULL(t.is_credit, 0) = 1
+                 THEN abs(CAST(IFNULL(t.amount_ars, '0') AS REAL)) ELSE 0 END) AS pay_ars,
+            SUM(CASE WHEN IFNULL(t.is_payment, 0) = 0 AND IFNULL(t.is_credit, 0) = 0
+                 THEN abs(CAST(IFNULL(t.amount_usd, '0') AS REAL)) ELSE 0 END) AS charge_usd,
+            SUM(CASE WHEN IFNULL(t.is_payment, 0) = 1 OR IFNULL(t.is_credit, 0) = 1
+                 THEN abs(CAST(IFNULL(t.amount_usd, '0') AS REAL)) ELSE 0 END) AS pay_usd
+     FROM card_statements s
+     INNER JOIN household_members m ON m.household_id = s.household_id
+     LEFT JOIN transactions t ON t.statement_id = s.id
+     WHERE m.user_id = ?
+       AND (
+         s.source IN ('bbva_pdf', 'bbva_period')
+         OR lower(IFNULL(s.file_name, '')) LIKE '%visa%'
+       )
+     GROUP BY s.id`,
+  )
+    .bind(userId)
+    .all<{
+      id: string;
+      source: string;
+      file_name: string | null;
+      closed_at: number | null;
+      period_to: string | null;
+      charge_ars: number | null;
+      pay_ars: number | null;
+      charge_usd: number | null;
+      pay_usd: number | null;
+    }>();
+
+  const out: StatementDebtInput[] = [];
+  for (const row of res.results ?? []) {
+    const fromClosed =
+      row.closed_at != null && Number(row.closed_at) >= 1_577_836_800_000
+        ? todayAr(new Date(Number(row.closed_at)))
+        : null;
+    const date = row.period_to || fromClosed;
+    if (!date) continue;
+    out.push({
+      date,
+      debtArs: Math.max(0, num(row.charge_ars) - num(row.pay_ars)),
+      debtUsd: Math.max(0, num(row.charge_usd) - num(row.pay_usd)),
+      debtKind: "statement_total",
+    });
+  }
+  return out;
 }
 
 async function livePosition(env: Env, userId: string, fxRate: number | null): Promise<LivePosition> {

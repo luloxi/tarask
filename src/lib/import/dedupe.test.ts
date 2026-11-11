@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  amountDayKey,
   foldMerchant,
+  isAnonymousMerchant,
   isNumericMerchant,
+  isTransferLike,
   logicalMerchantKey,
   merchantsMatch,
 } from "./dedupe";
@@ -42,6 +45,30 @@ describe("logicalMerchantKey", () => {
       amountUsd: null,
     });
     assert.equal(numeric, "2026-08-18|ARS:18402.00|");
+  });
+
+  it("treats Pago a 0002 as an empty merchant key", () => {
+    assert.equal(isAnonymousMerchant("Pago a 0002"), true);
+    assert.equal(foldMerchant("Pago a 0002"), "A");
+    assert.equal(
+      logicalMerchantKey({
+        date: "2026-08-20",
+        descriptionNormalized: "Pago a 0002",
+        amountArs: 23781.85,
+        amountUsd: null,
+      }),
+      "2026-08-20|ARS:23781.85|",
+    );
+    assert.equal(
+      amountDayKey({
+        date: "2026-08-20",
+        amountArs: 23781.85,
+        amountUsd: null,
+      }),
+      "2026-08-20|ARS:23781.85",
+    );
+    assert.equal(isTransferLike("TRANSFERENCIA ARS"), true);
+    assert.equal(isTransferLike("Pago a Carrefour"), false);
   });
 
   it("does not pair different shops on the same amount", () => {

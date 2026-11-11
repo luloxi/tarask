@@ -2,10 +2,11 @@
  * Cross-source duplicates: the same spend (same day + amount + merchant)
  * from a bank alert, a statement and Fiwind is shown once.
  *
- * Fiwind numeric echoes stay in `fiwind-dups.ts` (±2 days at home, same
- * day across households). This module only drops extra named copies, or a
- * same-day numeric Fiwind row when a named twin of the same amount exists
- * in any of the user's households.
+ * Fiwind numeric echoes stay in `fiwind-dups.ts` (named spend ±2 days at
+ * home, same day across households; never a transfer). This module drops
+ * extra named copies, or a same-day anonymous row (digits / empty merchant)
+ * when a named twin of the same amount exists in any of the user's
+ * households.
  *
  * Pairing is 1:1 and pure. Rows are not deleted. A loader error returns
  * no ids, so every row still counts.
@@ -13,7 +14,8 @@
 
 import {
   compactMerchant,
-  isNumericMerchant,
+  isAnonymousMerchant,
+  isTransferLike,
   merchantsMatch,
 } from "../src/lib/import/dedupe";
 
@@ -40,7 +42,7 @@ type Side = {
   bank: string;
   source: string;
   description: string;
-  numeric: boolean;
+  anonymous: boolean;
   merchant: string;
   ars: number;
   usd: number;
@@ -75,7 +77,7 @@ function withinTolerance(left: number, right: number, tol: number): boolean {
 
 function keepScore(row: Side): number {
   let score = 0;
-  if (!row.numeric) score += 100;
+  if (!row.anonymous) score += 100;
   const source = row.source.toLowerCase();
   const bank = row.bank.toLowerCase();
   if (source.startsWith("bbva") || bank === "bbva") score += 20;
@@ -92,16 +94,6 @@ function cmpText(a: string, b: string): number {
   return 0;
 }
 
-function isTransferLike(description: string): boolean {
-  const text = description.toUpperCase();
-  return (
-    text.includes("TRANSFERENCIA") ||
-    text.includes("TRANSF ") ||
-    text.includes("DEBIN") ||
-    text.includes("TRANSFER ")
-  );
-}
-
 function sameMovement(a: Side, b: Side): boolean {
   if (a.date !== b.date) return false;
   const left = ownAmount(a.ars, a.usd);
@@ -110,18 +102,19 @@ function sameMovement(a: Side, b: Side): boolean {
   if (left.amount * right.amount <= 0) return false;
   const tol = left.currency === "ARS" ? ARS_TOLERANCE : USD_TOLERANCE;
   if (!withinTolerance(left.amount, right.amount, tol)) return false;
-  if (a.numeric && !b.numeric) return !isTransferLike(b.description);
-  if (b.numeric && !a.numeric) return !isTransferLike(a.description);
-  if (a.numeric && b.numeric) return true;
+  if (a.anonymous && !b.anonymous) return !isTransferLike(b.description);
+  if (b.anonymous && !a.anonymous) return !isTransferLike(a.description);
+  if (a.anonymous && b.anonymous) return true;
   if (isTransferLike(a.description) || isTransferLike(b.description)) return false;
   return merchantsMatch(a.merchant, b.merchant);
 }
 
 /**
  * Ids to hide. `userHouseholdIds` is the requesting user's membership.
- * A Fiwind numeric row drops when a named twin of the same amount exists
- * that same day in any of those households. Named copies of the same shop
- * drop the weaker source (Fiwind / later copy). The keeper stays.
+ * An anonymous row (Fiwind digits, or a merchant that folds to nothing)
+ * drops when a named twin of the same amount exists that same day in any
+ * of those households. Named copies of the same shop drop the weaker
+ * source (Fiwind / later copy). The keeper stays.
  */
 export function pairLogicalDuplicates(
   rows: readonly LogicalDupRow[],
@@ -135,7 +128,7 @@ export function pairLogicalDuplicates(
     if (!/^\d{4}-\d{2}-\d{2}$/.test(row.date)) continue;
     seen.add(row.id);
     const description = row.description ?? "";
-    const numeric = (row.bank ?? "") === "Fiwind" && isNumericMerchant(description);
+    const anonymous = isAnonymousMerchant(description);
     sides.push({
       id: row.id,
       householdId: row.householdId,
@@ -143,8 +136,8 @@ export function pairLogicalDuplicates(
       bank: row.bank ?? "",
       source: row.source ?? "",
       description,
-      numeric,
-      merchant: numeric ? "" : compactMerchant(description),
+      anonymous,
+      merchant: anonymous ? "" : compactMerchant(description),
       ars: parseAmount(row.amountArs),
       usd: parseAmount(row.amountUsd),
       createdAt: Number(row.createdAt) || 0,

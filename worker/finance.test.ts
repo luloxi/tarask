@@ -370,6 +370,60 @@ describe("patrimonio snapshots", () => {
     assert.equal(still.n, 1);
   });
 
+  it("GET /api/patrimonio plots Visa statement totals down to settled zero", async () => {
+    const db = openDb();
+    seedHousehold(db);
+    seedSavings(db, "user-a", "100.00", "0.00");
+    const cleared = Date.parse("2026-07-15T12:00:00.000-03:00");
+    db.prepare(
+      `INSERT INTO debt_settings (user_id, force_settled, saldo_deuda_ars, saldo_deuda_usd, cleared_at)
+       VALUES ('user-a', 1, '0.00', '0.00', ?)`,
+    ).run(cleared);
+    db.prepare(
+      `INSERT INTO card_statements (id, household_id, source, file_name, imported_at, row_count, status)
+       VALUES ('visa-may', 'h1', 'bbva_pdf', 'resumen-visa-2025-05.pdf', 1, 2, 'closed')`,
+    ).run();
+    db.prepare(
+      `INSERT INTO card_statements (id, household_id, source, file_name, imported_at, row_count, status)
+       VALUES ('visa-jun', 'h1', 'bbva_period', 'periodo-2026-06.xls', 2, 2, 'closed')`,
+    ).run();
+    db.exec(
+      `INSERT INTO transactions (
+         id, household_id, statement_id, date, description_raw, description_normalized,
+         amount_ars, is_payment, is_credit, ownership, paid_by_user_id, external_fingerprint, source
+       ) VALUES
+         ('t-may-1', 'h1', 'visa-may', '2025-05-10', 'SUPER', 'SUPER', '200.00', 0, 0, 'personal', 'user-a', 'fp-may-1', 'bbva_pdf'),
+         ('t-may-2', 'h1', 'visa-may', '2025-05-31', 'PAGO', 'PAGO', '50.00', 1, 0, 'personal', 'user-a', 'fp-may-2', 'bbva_pdf'),
+         ('t-jun-1', 'h1', 'visa-jun', '2026-06-02', 'DIA', 'DIA', '40.00', 0, 0, 'personal', 'user-a', 'fp-jun-1', 'bbva_period')`,
+    );
+    db.prepare(
+      `INSERT INTO patrimonio_snapshots (
+         id, user_id, date, assets_ars, assets_usd, debt_ars, debt_usd, net_worth_ars, fx_rate, source, created_at
+       ) VALUES ('p-now', 'user-a', '2026-10-31', '100.00', '0.00', '0.00', '0.00', '100.00', '1000.00', 'snapshot', 1)`,
+    ).run();
+    primeFxForTests({ blue: 1000 });
+    const res = await handlePatrimonio(
+      new Request("https://tarask.test/api/patrimonio"),
+      envFor(db, []),
+      userA,
+    );
+    assert.equal(res.status, 200);
+    const body = (await res.json()) as {
+      derived: boolean;
+      series: Array<{ date: string; debtArs: number; source: string; debtKind?: string }>;
+      note: string;
+    };
+    assert.equal(body.derived, true);
+    const byDate = Object.fromEntries(body.series.map((point) => [point.date, point]));
+    assert.equal(byDate["2025-05-31"]?.debtArs, 150);
+    assert.equal(byDate["2025-05-31"]?.debtKind, "statement_total");
+    assert.equal(byDate["2026-06-02"]?.debtArs, 40);
+    assert.equal(byDate["2026-07-15"]?.debtArs, 0);
+    assert.equal(byDate["2026-10-31"]?.debtArs, 0);
+    assert.equal(byDate["2026-10-31"]?.source, "snapshot");
+    assert.match(body.note, /total del resumen Visa/);
+  });
+
   it("cron writes once and ignores a later blue move", async () => {
     const db = openDb();
     seedHousehold(db);

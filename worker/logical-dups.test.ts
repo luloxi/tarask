@@ -37,6 +37,30 @@ describe("pairLogicalDuplicates", () => {
     assert.deepEqual(drop, ["fiwind"]);
   });
 
+  it("drops a Personal numeric against Invoice IOG Uber the same day", () => {
+    const drop = dropped([
+      row({
+        id: "num",
+        householdId: "personal",
+        date: "2026-08-31",
+        bank: "Fiwind",
+        source: "xlsx_import",
+        description: "5971",
+        amountArs: "5971",
+      }),
+      row({
+        id: "uber",
+        householdId: "casita",
+        date: "2026-08-31",
+        bank: "BBVA",
+        source: "invoice_iog",
+        description: "Uber",
+        amountArs: "5971",
+      }),
+    ]);
+    assert.deepEqual(drop, ["num"]);
+  });
+
   it("drops a same-day numeric Fiwind when a named twin exists in another household", () => {
     const drop = dropped([
       row({
@@ -131,6 +155,39 @@ describe("pairLogicalDuplicates", () => {
       }),
     ]);
     assert.deepEqual(drop, []);
+  });
+
+  it("drops Pago a 0002 against a named spend of the same day and amount", () => {
+    const drop = dropped([
+      row({
+        id: "carrefour",
+        householdId: "hh",
+        date: "2026-08-20",
+        bank: "BBVA",
+        source: "bbva_xlsx",
+        description: "Pago a Carrefour",
+        amountArs: "23781.85",
+      }),
+      row({
+        id: "pago-0002",
+        householdId: "hh",
+        date: "2026-08-20",
+        bank: "BBVA",
+        source: "bbva_import",
+        description: "Pago a 0002",
+        amountArs: "23781.85",
+      }),
+      row({
+        id: "fiwind-num",
+        householdId: "hh",
+        date: "2026-08-20",
+        bank: "Fiwind",
+        source: "xlsx_import",
+        description: "23781.85",
+        amountArs: "23781.85",
+      }),
+    ]);
+    assert.deepEqual(drop, ["fiwind-num", "pago-0002"]);
   });
 
   it("pairs Mercado Libre across alert and statement wording", () => {

@@ -18,7 +18,12 @@ import {
   resolveImportBank,
   statementTxSource,
 } from "@/lib/import/source";
-import { logicalExpenseKey, logicalMerchantKey } from "@/lib/import/dedupe";
+import {
+  amountDayKey,
+  isAnonymousMerchant,
+  logicalExpenseKey,
+  logicalMerchantKey,
+} from "@/lib/import/dedupe";
 
 export { logicalExpenseKey };
 
@@ -337,9 +342,21 @@ export async function importBbvaFile(opts: {
       return key ? [key] : [];
     }),
   );
+  const existingNamedAmountKeys = new Set(
+    existingLogical.flatMap((r) => {
+      if (isAnonymousMerchant(r.descriptionNormalized)) return [];
+      const key = amountDayKey({
+        date: r.date,
+        amountArs: r.amountArs != null ? Number(r.amountArs) : null,
+        amountUsd: r.amountUsd != null ? Number(r.amountUsd) : null,
+      });
+      return key ? [key] : [];
+    }),
+  );
 
   const insertedLogical = new Set<string>();
   const insertedMerchant = new Set<string>();
+  const insertedNamedAmount = new Set<string>();
 
   const toInsert = uniqueMovements.filter((m) => {
     if (existingFp.has(m.fingerprint)) return false;
@@ -350,8 +367,19 @@ export async function importBbvaFile(opts: {
     if (merchantKey && (existingMerchantKeys.has(merchantKey) || insertedMerchant.has(merchantKey))) {
       return false;
     }
+    const dayAmount = amountDayKey(m);
+    if (
+      isAnonymousMerchant(m.descriptionNormalized) &&
+      dayAmount &&
+      (existingNamedAmountKeys.has(dayAmount) || insertedNamedAmount.has(dayAmount))
+    ) {
+      return false;
+    }
     insertedLogical.add(key);
     if (merchantKey) insertedMerchant.add(merchantKey);
+    if (dayAmount && !isAnonymousMerchant(m.descriptionNormalized)) {
+      insertedNamedAmount.add(dayAmount);
+    }
     return true;
   });
   const alreadyExists = uniqueMovements.length - toInsert.length;

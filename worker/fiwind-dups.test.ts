@@ -209,6 +209,81 @@ describe("pairFiwindEchoes", () => {
     assert.equal(drop.size, 2);
   });
 
+  it("does not hide a numeric echo against a transfer, even the next day", () => {
+    const nextDay = dropped([
+      row({
+        id: "num",
+        householdId: "hh",
+        date: "2026-08-06",
+        bank: "Fiwind",
+        description: "20000",
+        amountArs: "20000",
+      }),
+      row({
+        id: "xfer",
+        householdId: "hh",
+        date: "2026-08-05",
+        bank: "Fiwind",
+        description: "TRANSFERENCIA ARS",
+        amountArs: "20000",
+      }),
+    ]);
+    assert.equal(nextDay.size, 0);
+    const sameDay = dropped([
+      row({
+        id: "num",
+        householdId: "hh",
+        date: "2026-08-06",
+        bank: "Fiwind",
+        description: "20000",
+        amountArs: "20000",
+      }),
+      row({
+        id: "xfer",
+        householdId: "hh",
+        date: "2026-08-06",
+        bank: "Fiwind",
+        description: "TRANSFERENCIA ARS",
+        amountArs: "20000",
+      }),
+    ]);
+    assert.equal(sameDay.size, 0);
+  });
+
+  it("keeps ±2 days only for a named spend, not an empty merchant", () => {
+    const named = dropped([
+      row({ id: "num", householdId: "hh", date: "2026-08-20", bank: "Fiwind", description: "90", amountArs: "90" }),
+      row({
+        id: "shop",
+        householdId: "hh",
+        date: "2026-08-18",
+        bank: "BBVA",
+        description: "Cafe Martinez",
+        amountArs: "90",
+      }),
+    ]);
+    assert.deepEqual([...named], ["num"]);
+    const emptyKey = dropped([
+      row({
+        id: "num",
+        householdId: "hh",
+        date: "2026-08-22",
+        bank: "Fiwind",
+        description: "91",
+        amountArs: "91",
+      }),
+      row({
+        id: "pago",
+        householdId: "hh",
+        date: "2026-08-20",
+        bank: "BBVA",
+        description: "Pago a 0002",
+        amountArs: "91",
+      }),
+    ]);
+    assert.equal(emptyKey.size, 0);
+  });
+
   it("stays inside ±2 days at home and requires the same day across households", () => {
     const edge = dropped([
       row({ id: "num", householdId: "hh", date: "2026-08-10", bank: "Fiwind", description: "101", amountArs: "101" }),

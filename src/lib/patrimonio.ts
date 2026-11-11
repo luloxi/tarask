@@ -15,6 +15,15 @@ export type PatrimonioPoint = {
   netWorthArs: number;
   fxRate: number | null;
   source: PatrimonioSource;
+  /** How debt was obtained when source is derived. */
+  debtKind?: "statement_total" | "closing_balance";
+};
+
+export type StatementDebtInput = {
+  date: string;
+  debtArs: number;
+  debtUsd: number;
+  debtKind?: "statement_total" | "closing_balance";
 };
 
 export type SeriesRange = "6m" | "1y" | "all";
@@ -189,12 +198,97 @@ export function historyStartsAt(points: PatrimonioPoint[]): string | null {
 }
 
 /** Spanish note. No em dash. */
-export function historyNote(firstDate: string | null): string {
+export function historyNote(
+  firstDate: string | null,
+  opts?: { statementTotals?: boolean },
+): string {
   if (!firstDate) {
-    return "Todavía no hay puntos. El de hoy se guarda una vez por día. La deuda vieja de la Visa solo aparece si se guardó un saldo en ese momento; no la inventamos.";
+    return opts?.statementTotals
+      ? "Todavía no hay puntos. El de hoy se guarda una vez por día."
+      : "Todavía no hay puntos. El de hoy se guarda una vez por día. La deuda vieja de la Visa solo aparece si se guardó un saldo en ese momento; no la inventamos.";
   }
   const [year, month, day] = firstDate.split("-");
-  return `El historial arranca el ${day}/${month}/${year}. Un punto por día.`;
+  const start = `El historial arranca el ${day}/${month}/${year}. Un punto por día.`;
+  if (opts?.statementTotals) {
+    return `${start} La deuda de cada mes es el total del resumen Visa (cargos menos pagos de ese archivo). No hay saldo de cierre guardado.`;
+  }
+  return start;
+}
+
+/**
+ * Fill gaps before daily snapshots using one point per Visa statement.
+ * Does not invent a closing balance: `debtKind` says whether the figure is
+ * a stored saldo or the sum of txs on that statement.
+ * A snapshot on the same day wins. Assets before the first snapshot stay 0.
+ */
+export function mergeStatementDebtHistory(
+  snapshots: readonly PatrimonioPoint[],
+  statements: readonly StatementDebtInput[],
+  fxRate: number | null,
+): PatrimonioPoint[] {
+  const byDate = new Map<string, PatrimonioPoint>();
+  const orderedSnaps = [...snapshots].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  for (const point of orderedSnaps) byDate.set(point.date, { ...point });
+
+  const orderedStatements = [...statements]
+    .filter((row) => /^\d{4}-\d{2}-\d{2}$/.test(row.date) && row.date >= "2020-01-01")
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+
+  for (const row of orderedStatements) {
+    if (byDate.has(row.date)) continue;
+    let assetsArs = 0;
+    let assetsUsd = 0;
+    let priorRate = fxRate;
+    for (const snap of orderedSnaps) {
+      if (snap.date > row.date) break;
+      assetsArs = snap.assetsArs;
+      assetsUsd = snap.assetsUsd;
+      if (snap.fxRate != null) priorRate = snap.fxRate;
+    }
+    const debtArs = finite(row.debtArs);
+    const debtUsd = finite(row.debtUsd);
+    const rate = usableFxRate(priorRate);
+    byDate.set(row.date, {
+      date: row.date,
+      assetsArs,
+      assetsUsd,
+      debtArs,
+      debtUsd,
+      netWorthArs: netWorthArs(assetsArs, debtArs, debtUsd, rate),
+      fxRate: rate,
+      source: "derived",
+      debtKind: row.debtKind ?? "statement_total",
+    });
+  }
+
+  return [...byDate.values()].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+}
+
+/** Guarantee a zero-debt point on the settle date without rewriting earlier rows. */
+export function appendSettledZero(
+  points: readonly PatrimonioPoint[],
+  clearedOn: string | null,
+): PatrimonioPoint[] {
+  if (!clearedOn || !/^\d{4}-\d{2}-\d{2}$/.test(clearedOn)) return [...points];
+  const existing = points.find((point) => point.date === clearedOn);
+  if (existing) return [...points];
+  const prior = [...points].filter((point) => point.date < clearedOn).at(-1);
+  const assetsArs = prior?.assetsArs ?? 0;
+  const assetsUsd = prior?.assetsUsd ?? 0;
+  return [
+    ...points,
+    {
+      date: clearedOn,
+      assetsArs,
+      assetsUsd,
+      debtArs: 0,
+      debtUsd: 0,
+      netWorthArs: assetsArs,
+      fxRate: prior?.fxRate ?? null,
+      source: "derived",
+      debtKind: "closing_balance",
+    },
+  ].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 }
 
 export type NetWorthChange = {

@@ -51,6 +51,26 @@ export function isNumericMerchant(description: string | null | undefined): boole
   return !/[^0-9.]/.test(text);
 }
 
+/** Transfer / DEBIN wording. Never a named spend twin. */
+export function isTransferLike(description: string | null | undefined): boolean {
+  const text = (description ?? "").toUpperCase();
+  return (
+    text.includes("TRANSFERENCIA") ||
+    text.includes("TRANSF ") ||
+    text.includes("DEBIN") ||
+    text.includes("TRANSFER ")
+  );
+}
+
+/**
+ * Digits-only, or folding left nothing (PAGO A 0002 → empty).
+ * Pair as an echo against a named spend on the same day and amount.
+ */
+export function isAnonymousMerchant(description: string | null | undefined): boolean {
+  if (isNumericMerchant(description)) return true;
+  return compactMerchant(description).length < 3;
+}
+
 function amountPart(
   amountArs: number | null | undefined,
   amountUsd: number | null | undefined,
@@ -69,9 +89,21 @@ function amountPart(
   return "";
 }
 
+/** Same calendar day + same amount, ignoring merchant. */
+export function amountDayKey(m: {
+  date: string;
+  amountArs: number | null;
+  amountUsd: number | null;
+}): string | null {
+  const amount = amountPart(m.amountArs, m.amountUsd);
+  if (!amount) return null;
+  return `${m.date}|${amount}`;
+}
+
 /**
  * Same calendar day + same amount + same folded merchant.
- * Numeric-only Fiwind rows keep an empty merchant so they pair on date+amount.
+ * Numeric-only and empty-after-fold rows keep an empty merchant so they
+ * pair on date+amount against a named spend.
  */
 export function logicalMerchantKey(m: {
   date: string;
@@ -81,15 +113,16 @@ export function logicalMerchantKey(m: {
 }): string | null {
   const amount = amountPart(m.amountArs, m.amountUsd);
   if (!amount) return null;
-  const merchant = isNumericMerchant(m.descriptionNormalized)
+  const merchant = isAnonymousMerchant(m.descriptionNormalized)
     ? ""
     : compactMerchant(m.descriptionNormalized);
-  if (!merchant && !isNumericMerchant(m.descriptionNormalized)) return null;
+  if (!merchant && !isAnonymousMerchant(m.descriptionNormalized)) return null;
   return `${m.date}|${amount}|${merchant}`;
 }
 
 /** True when two named shops are the same movement. */
 export function merchantsMatch(left: string, right: string): boolean {
+  if (isAnonymousMerchant(left) || isAnonymousMerchant(right)) return false;
   const a = compactMerchant(left);
   const b = compactMerchant(right);
   if (!a || !b) return false;

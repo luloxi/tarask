@@ -12,11 +12,12 @@
  * A loader error returns no ids, so every row still counts.
  *
  * `pairFiwindEchoes` is pure and 1:1. An eligible pair is a Fiwind numeric
- * row and a different row whose description is not numeric-only (any bank,
- * source, payment, or credit). Same household and at most 2 calendar days
- * apart, or two households of this user on the same calendar day. A household
- * absent from `userHouseholdIds` is ignored, so another user's household
- * cannot cancel a row.
+ * row and a different row whose description is not numeric-only and is not
+ * a transfer (TRANSFERENCIA / DEBIN). A named spend (letters left after
+ * folding) may sit up to 2 calendar days away in the same household.
+ * Anything else, including an empty merchant like "Pago a 0002", is
+ * same-day only. Two households of this user always need the same calendar
+ * day. A household absent from `userHouseholdIds` is ignored.
  *
  * The amount is the numeric row's own currency, signed, same direction, and
  * non-zero. Own currency is USD when |amount_usd| >= 0.005 and the ARS
@@ -30,6 +31,8 @@
  * once. The named twin stays. Candidates are grouped by currency and a
  * rounded amount key so the work is O(n log n) over a few hundred rows.
  */
+
+import { isAnonymousMerchant, isTransferLike } from "../src/lib/import/dedupe";
 
 const ARS_TOLERANCE = 0.01;
 const USD_TOLERANCE = 0.005;
@@ -56,6 +59,7 @@ type Side = {
   day: number;
   ars: number;
   usd: number;
+  namedSpend: boolean;
 };
 
 type Pair = {
@@ -164,6 +168,8 @@ export function pairFiwindEchoes(
     const day = dayIndex(row.date);
     if (day == null) continue;
     seen.add(row.id);
+    const description = row.description ?? "";
+    if (isTransferLike(description)) continue;
     const side: Side = {
       id: row.id,
       householdId: row.householdId,
@@ -171,10 +177,11 @@ export function pairFiwindEchoes(
       day,
       ars: parseAmount(row.amountArs),
       usd: parseAmount(row.amountUsd),
+      namedSpend: !isAnonymousMerchant(description),
     };
-    const numeric = (row.bank ?? "") === "Fiwind" && isNumericDescription(row.description);
+    const numeric = (row.bank ?? "") === "Fiwind" && isNumericDescription(description);
     if (numeric) numerics.push(side);
-    else if (!isNumericDescription(row.description)) named.push(side);
+    else if (!isNumericDescription(description)) named.push(side);
   }
   if (numerics.length === 0 || named.length === 0) return new Set();
 
@@ -210,7 +217,8 @@ export function pairFiwindEchoes(
         const distance = Math.abs(numeric.day - twin.day);
         const sameHousehold = numeric.householdId === twin.householdId;
         if (sameHousehold) {
-          if (distance > 2) continue;
+          const maxDistance = twin.namedSpend ? 2 : 0;
+          if (distance > maxDistance) continue;
         } else if (distance !== 0) {
           continue;
         }

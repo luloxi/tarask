@@ -34,6 +34,7 @@ type Payload = {
   note: string;
   trustedMonths: string[];
   flujo?: FlowPoint[];
+  derived?: boolean;
 };
 
 const RANGES: Array<{ id: SeriesRange; label: string }> = [
@@ -245,7 +246,12 @@ export function PatrimonioView() {
           {shown.length >= 2 && <p>{data.note}</p>}
           {fxMissing && <p>Sin cotización blue. No valuamos los dólares en 0.</p>}
           {current.cardStatus === "sin_tarjeta_activa" && <p>Sin tarjeta activa.</p>}
-          {data.trustedMonths.length === 0 && (
+          {data.derived && (
+            <p>
+              La deuda histórica es el total de cada resumen Visa (cargos menos pagos de ese archivo). No hay saldo de cierre en D1. No inventamos números.
+            </p>
+          )}
+          {!data.derived && data.trustedMonths.length === 0 && (
             <p>
               No hay meses anteriores confiables. El extracto de la tarjeta está incompleto, así que no estimamos deuda vieja.
             </p>
@@ -309,7 +315,7 @@ function PatrimonioChart({ points, showParts }: { points: PatrimonioPoint[]; sho
     points
       .map((point, index) => `${index === 0 ? "M" : "L"} ${x(index).toFixed(1)} ${y(pick(point)).toFixed(1)}`)
       .join(" ");
-  const anyDerived = points.some((point) => point.source === "derived");
+  const debtFromTotals = points.some((point) => point.debtKind === "statement_total");
   const netPath = d((point) => point.netWorthArs);
   const last = points.length - 1;
 
@@ -334,7 +340,6 @@ function PatrimonioChart({ points, showParts }: { points: PatrimonioPoint[]; sho
               fill="none"
               stroke="var(--chart-3)"
               strokeWidth="2"
-              strokeDasharray={anyDerived ? "4 3" : undefined}
               strokeLinecap="round"
             />
             <path
@@ -342,7 +347,7 @@ function PatrimonioChart({ points, showParts }: { points: PatrimonioPoint[]; sho
               fill="none"
               stroke="var(--chart-err)"
               strokeWidth="2"
-              strokeDasharray={anyDerived ? "4 3" : undefined}
+              strokeDasharray={debtFromTotals ? "4 3" : undefined}
               strokeLinecap="round"
             />
           </>
@@ -373,8 +378,13 @@ function PatrimonioChart({ points, showParts }: { points: PatrimonioPoint[]; sho
       <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-[var(--muted-fg)]">
         <Legend color="var(--chart-1)" label="Patrimonio" />
         {showParts && <Legend color="var(--chart-3)" label="Ahorros" />}
-        {showParts && <Legend color="var(--chart-err)" label="Deuda" />}
-        {anyDerived && <span>Línea punteada: estimado</span>}
+        {showParts && (
+          <Legend
+            color="var(--chart-err)"
+            label={debtFromTotals ? "Deuda (total de cada resumen)" : "Deuda"}
+          />
+        )}
+        {debtFromTotals && <span>Punteada: no es saldo de cierre</span>}
       </div>
     </div>
   );

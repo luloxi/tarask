@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   TRUSTED_DEBT_MONTHS,
+  applySettledDebtHistory,
   assetsEquivalent,
   filterPatrimonioSeries,
   historyNote,
@@ -147,6 +148,21 @@ describe("patrimonio series", () => {
     });
     assert.equal(empty.settled, false);
     assert.equal(empty.cardStatus, "sin_snapshot");
+  });
+
+  it("zeros debt only on and after the settle date", () => {
+    const points = [
+      point("2026-01-10", 100, 80),
+      point("2026-03-01", 120, 20),
+      point("2026-04-01", 130, 20),
+    ];
+    const settled = applySettledDebtHistory(points, { settled: true, clearedOn: "2026-03-15" });
+    assert.equal(settled[0]?.debtArs, 80);
+    assert.equal(settled[1]?.debtArs, 20);
+    assert.equal(settled[2]?.debtArs, 0);
+    assert.equal(settled[2]?.netWorthArs, 130);
+    const untouched = applySettledDebtHistory(points, { settled: true, clearedOn: null });
+    assert.equal(untouched[2]?.debtArs, 20);
   });
 
   it("filters 6m and 1y without inventing months", () => {

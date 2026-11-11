@@ -156,7 +156,7 @@ export function PatrimonioGlance() {
 export function PatrimonioView() {
   const { data, error } = usePatrimonio();
   const [range, setRange] = useState<SeriesRange>("all");
-  const [showParts, setShowParts] = useState(false);
+  const [showParts, setShowParts] = useState(true);
 
   const shown = useMemo(
     () => (data ? filterPatrimonioSeries(data.series, range, data.current.date) : []),
@@ -225,7 +225,7 @@ export function PatrimonioView() {
           aria-pressed={showParts}
           className="lc-btn lc-btn-secondary mt-3 !min-h-11 w-full"
         >
-          {showParts ? "Ocultar ahorros y deuda" : "Ver ahorros y deuda en el gráfico"}
+          {showParts ? "Solo patrimonio" : "Ver ahorros y deuda"}
         </button>
       </section>
 

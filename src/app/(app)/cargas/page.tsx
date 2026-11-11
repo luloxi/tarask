@@ -1,5 +1,5 @@
-import { RedirectInicio } from "@/components/redirect-inicio";
+import { CargasView } from "@/components/cargas-view";
 
 export default function Page() {
-  return <RedirectInicio />;
+  return <CargasView />;
 }

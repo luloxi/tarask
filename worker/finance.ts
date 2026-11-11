@@ -1,6 +1,7 @@
 import { expenseAmountText, parseExpenseAmount } from "../src/lib/manual-expense";
 import {
   TRUSTED_DEBT_MONTHS,
+  applySettledDebtHistory,
   assetsEquivalent,
   historyNote,
   historyStartsAt,
@@ -446,36 +447,45 @@ async function resolveFx(fxRate?: number | null): Promise<number | null> {
 async function patrimonioPayload(req: Request, env: Env, userId: string) {
   const fx = await loadFx();
   const rate = usableFxRate(fx.blue);
-  const position = await livePosition(env, userId, rate);
   const date = todayAr();
-  const stored = await env.DB.prepare(
-    `SELECT date, assets_ars, assets_usd, debt_ars, debt_usd, net_worth_ars, fx_rate, source
-     FROM patrimonio_snapshots
-     WHERE user_id = ?
-     ORDER BY date DESC
-     LIMIT 400`,
-  )
-    .bind(userId)
-    .all<{
-      date: string;
-      assets_ars: string;
-      assets_usd: string;
-      debt_ars: string;
-      debt_usd: string;
-      net_worth_ars: string;
-      fx_rate: string | null;
-      source: string;
-    }>();
-  const series: PatrimonioPoint[] = (stored.results ?? []).map((row) => ({
-    date: row.date,
-    assetsArs: num(row.assets_ars),
-    assetsUsd: num(row.assets_usd),
-    debtArs: num(row.debt_ars),
-    debtUsd: num(row.debt_usd),
-    netWorthArs: num(row.net_worth_ars),
-    fxRate: row.fx_rate != null ? num(row.fx_rate) : null,
-    source: snapshotSource(row.source),
-  })).reverse();
+  const [position, stored, debt] = await Promise.all([
+    livePosition(env, userId, rate),
+    env.DB.prepare(
+      `SELECT date, assets_ars, assets_usd, debt_ars, debt_usd, net_worth_ars, fx_rate, source
+       FROM patrimonio_snapshots
+       WHERE user_id = ?
+       ORDER BY date DESC
+       LIMIT 400`,
+    )
+      .bind(userId)
+      .all<{
+        date: string;
+        assets_ars: string;
+        assets_usd: string;
+        debt_ars: string;
+        debt_usd: string;
+        net_worth_ars: string;
+        fx_rate: string | null;
+        source: string;
+      }>(),
+    debtRow(env, userId),
+  ]);
+  const reading = debtReading(debt);
+  const clearedOn =
+    debt?.cleared_at != null ? todayAr(new Date(Number(debt.cleared_at))) : null;
+  const series: PatrimonioPoint[] = applySettledDebtHistory(
+    (stored.results ?? []).map((row) => ({
+      date: row.date,
+      assetsArs: num(row.assets_ars),
+      assetsUsd: num(row.assets_usd),
+      debtArs: num(row.debt_ars),
+      debtUsd: num(row.debt_usd),
+      netWorthArs: num(row.net_worth_ars),
+      fxRate: row.fx_rate != null ? num(row.fx_rate) : null,
+      source: snapshotSource(row.source),
+    })).reverse(),
+    { settled: reading.settled, clearedOn },
+  );
   const starts = historyStartsAt(series);
   const flujo = await monthlyFlow(req, env, userId, fx);
   return {
@@ -828,21 +838,39 @@ function optionalMoney(value: unknown): string | null | false {
 
 async function closedStatements(env: Env, userId: string) {
   const res = await env.DB.prepare(
-    `SELECT s.id AS id, s.file_name AS file_name, s.source AS source, s.status AS status, s.closed_at AS closed_at
+    `SELECT s.id AS id, s.file_name AS file_name, s.source AS source, s.status AS status,
+            s.closed_at AS closed_at, s.imported_at AS imported_at, s.row_count AS row_count,
+            MIN(t.date) AS period_from, MAX(t.date) AS period_to
      FROM card_statements s
      INNER JOIN household_members m ON m.household_id = s.household_id
-     WHERE m.user_id = ? AND s.status = 'closed'
-     ORDER BY s.closed_at DESC
-     LIMIT 24`,
+     LEFT JOIN transactions t ON t.statement_id = s.id
+     WHERE m.user_id = ?
+     GROUP BY s.id
+     ORDER BY s.imported_at DESC
+     LIMIT 100`,
   )
     .bind(userId)
-    .all<{ id: string; file_name: string | null; source: string; status: string; closed_at: number | null }>();
+    .all<{
+      id: string;
+      file_name: string | null;
+      source: string;
+      status: string;
+      closed_at: number | null;
+      imported_at: number | null;
+      row_count: number | null;
+      period_from: string | null;
+      period_to: string | null;
+    }>();
   return (res.results ?? []).map((row) => ({
     id: row.id,
     fileName: row.file_name,
     source: row.source,
     status: row.status,
     closedAt: row.closed_at != null ? new Date(row.closed_at).toISOString() : null,
+    importedAt: row.imported_at != null ? new Date(row.imported_at).toISOString() : null,
+    rowCount: num(row.row_count),
+    periodFrom: row.period_from,
+    periodTo: row.period_to,
   }));
 }
 

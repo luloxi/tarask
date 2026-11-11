@@ -19,6 +19,8 @@ type CargaItem = {
   status: string;
   source: string | null;
   detail: string | null;
+  periodFrom: string | null;
+  periodTo: string | null;
 };
 
 export async function handleCargas(
@@ -32,7 +34,7 @@ export async function handleCargas(
 
   const [statements, receipts, manuals] = await Promise.all([
     env.DB.prepare(
-      `SELECT id, source, file_name, imported_at, row_count
+      `SELECT id, source, file_name, imported_at, row_count, status
        FROM card_statements
        WHERE household_id = ?
        ORDER BY imported_at DESC
@@ -45,6 +47,7 @@ export async function handleCargas(
         file_name: string | null;
         imported_at: number | string | null;
         row_count: number | null;
+        status: string | null;
       }>(),
     env.DB.prepare(
       `SELECT id, merchant_name, receipt_date, status, created_at
@@ -84,6 +87,7 @@ export async function handleCargas(
   const statementRows = statements.results ?? [];
   const receiptRows = receipts.results ?? [];
   const bankByStatement = new Map<string, string>();
+  const periodByStatement = new Map<string, { from: string; to: string }>();
   const itemCounts = new Map<string, number>();
 
   const statementIds = statementRows.map((row) => row.id);
@@ -94,18 +98,25 @@ export async function handleCargas(
       (async () => {
         const { sql, binds } = inClause(statementIds);
         const res = await env.DB.prepare(
-          `SELECT statement_id AS id, bank AS bank
+          `SELECT statement_id AS id, MAX(bank) AS bank, MIN(date) AS period_from, MAX(date) AS period_to
            FROM transactions
            WHERE household_id = ?
              AND statement_id IN (${sql})
-             AND bank IS NOT NULL
-             AND bank != ''`,
+           GROUP BY statement_id`,
         )
           .bind(active.id, ...binds)
-          .all<{ id: string | null; bank: string | null }>();
+          .all<{
+            id: string | null;
+            bank: string | null;
+            period_from: string | null;
+            period_to: string | null;
+          }>();
         for (const row of res.results ?? []) {
-          if (!row.id || !row.bank || bankByStatement.has(row.id)) continue;
-          bankByStatement.set(row.id, row.bank);
+          if (!row.id) continue;
+          if (row.bank && !bankByStatement.has(row.id)) bankByStatement.set(row.id, row.bank);
+          if (row.period_from && row.period_to) {
+            periodByStatement.set(row.id, { from: row.period_from, to: row.period_to });
+          }
         }
       })(),
     );
@@ -133,6 +144,8 @@ export async function handleCargas(
   const items: CargaItem[] = [];
   for (const row of statementRows) {
     const count = num(row.row_count);
+    const period = periodByStatement.get(row.id);
+    const closed = row.status === "closed";
     items.push({
       id: `statement:${row.id}`,
       kind: "statement",
@@ -140,9 +153,11 @@ export async function handleCargas(
       date: isoFromMs(row.imported_at),
       fileName: row.file_name,
       count,
-      status: count > 0 ? "Importado" : "Sin filas",
+      status: closed ? "Cerrado" : count > 0 ? "Importado" : "Sin filas",
       source: row.source,
       detail: bankByStatement.get(row.id) ?? null,
+      periodFrom: period?.from ?? null,
+      periodTo: period?.to ?? null,
     });
   }
   for (const row of receiptRows) {
@@ -157,6 +172,8 @@ export async function handleCargas(
       status: receiptStatusLabel(row.status),
       source: "receipt",
       detail: row.receipt_date,
+      periodFrom: row.receipt_date,
+      periodTo: row.receipt_date,
     });
   }
   for (const row of manuals.results ?? []) {
@@ -170,6 +187,8 @@ export async function handleCargas(
       status: "Manual",
       source: "manual",
       detail: row.date,
+      periodFrom: row.date,
+      periodTo: row.date,
     });
   }
   items.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));

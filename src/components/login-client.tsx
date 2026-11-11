@@ -53,23 +53,7 @@ export function LoginClient() {
   }
 
   return (
-    <div className="relative flex h-dvh w-full flex-col overflow-hidden">
-      {/* Ambient background */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_#ecfdf5_0%,_transparent_55%),radial-gradient(ellipse_at_bottom_right,_#d1fae5_0%,_transparent_45%)] dark:bg-[radial-gradient(ellipse_at_top,_#064e3b33_0%,_transparent_55%),radial-gradient(ellipse_at_bottom_right,_#065f4633_0%,_transparent_45%)]" />
-        <div className="absolute -left-24 top-16 h-72 w-72 rounded-full bg-emerald-400/20 blur-3xl dark:bg-emerald-500/10" />
-        <div className="absolute -right-16 bottom-10 h-80 w-80 rounded-full bg-teal-300/25 blur-3xl dark:bg-teal-600/10" />
-        <div
-          className="absolute inset-0 opacity-[0.35] dark:opacity-[0.12]"
-          style={{
-            backgroundImage:
-              "linear-gradient(to right, rgb(16 185 129 / 0.07) 1px, transparent 1px), linear-gradient(to bottom, rgb(16 185 129 / 0.07) 1px, transparent 1px)",
-            backgroundSize: "48px 48px",
-            maskImage:
-              "radial-gradient(ellipse at center, black 20%, transparent 75%)",
-          }}
-        />
-      </div>
+    <div className="relative flex h-dvh w-full flex-col overflow-hidden bg-[var(--bg)]">
 
       <div className="mx-auto flex h-full w-full max-w-6xl flex-1 flex-col px-5 py-6 sm:px-8 sm:py-8 lg:flex-row lg:items-center lg:gap-12 lg:py-10">
         {/* Pitch */}
@@ -83,7 +67,7 @@ export function LoginClient() {
 
           <h1 className="text-balance text-3xl font-bold leading-[1.1] tracking-tight sm:text-4xl lg:text-5xl">
             Tus gastos, claros.
-            <span className="mt-1 block bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent dark:from-emerald-400 dark:to-teal-300">
+            <span className="mt-1 block text-[var(--accent-text)]">
               Sin planillas eternas.
             </span>
           </h1>
@@ -98,7 +82,7 @@ export function LoginClient() {
             {FEATURES.map((f) => (
               <li
                 key={f.title}
-                className="rounded-2xl border border-emerald-900/8 bg-white/70 p-3.5 shadow-sm backdrop-blur dark:border-white/10 dark:bg-zinc-950/50"
+                className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3.5"
               >
                 <p className="text-sm font-semibold tracking-tight">{f.title}</p>
                 <p className="mt-1 text-xs leading-snug text-zinc-500 dark:text-zinc-400">
@@ -113,7 +97,7 @@ export function LoginClient() {
             {FEATURES.map((f) => (
               <span
                 key={f.title}
-                className="rounded-full border border-emerald-900/10 bg-white/80 px-3 py-1 text-xs font-medium text-emerald-900 dark:border-white/10 dark:bg-zinc-900/70 dark:text-emerald-100"
+                className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--text)]"
               >
                 {f.title}
               </span>
@@ -121,41 +105,8 @@ export function LoginClient() {
           </div>
         </section>
 
-        {/* Auth card + preview */}
         <section className="mt-6 flex w-full shrink-0 flex-col justify-center lg:mt-0 lg:w-[380px]">
-          {/* Mini product preview */}
-          <div className="mb-4 hidden overflow-hidden rounded-3xl border border-emerald-900/10 bg-white/80 p-4 shadow-xl shadow-emerald-900/5 backdrop-blur sm:block dark:border-white/10 dark:bg-zinc-950/60 dark:shadow-black/30">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-xs font-medium text-zinc-500">Este mes</span>
-              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                en vivo
-              </span>
-            </div>
-            <p className="text-2xl font-semibold tracking-tight tabular-nums">
-              $ 482.340
-            </p>
-            <p className="mt-0.5 text-xs text-zinc-500">42 movimientos · 3 compartidos</p>
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              {[
-                { l: "Súper", v: "38%" },
-                { l: "Delivery", v: "14%" },
-                { l: "Transporte", v: "11%" },
-              ].map((c) => (
-                <div
-                  key={c.l}
-                  className="rounded-xl bg-emerald-50/80 px-2 py-2 dark:bg-emerald-950/40"
-                >
-                  <div className="text-[10px] text-zinc-500">{c.l}</div>
-                  <div className="text-sm font-semibold tabular-nums">{c.v}</div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
-              <div className="h-full w-[62%] rounded-full bg-gradient-to-r from-emerald-500 to-teal-400" />
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-emerald-900/10 bg-white/85 p-5 shadow-xl shadow-emerald-900/5 backdrop-blur dark:border-white/10 dark:bg-zinc-950/70 dark:shadow-black/40 sm:p-6">
+          <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
             <p className="text-center text-sm font-medium text-zinc-700 dark:text-zinc-200">
               Entrá para empezar
             </p>

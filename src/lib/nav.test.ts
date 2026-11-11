@@ -51,6 +51,7 @@ describe("nav del rediseño", () => {
       "/saldos": "/patrimonio",
       "/deuda": "/patrimonio",
       "/deuda/detalle": "/patrimonio",
+      "/cargas": "/patrimonio",
       "/compartido": "/compartido",
       "/grupo": "/compartido",
       "/pareja": "/compartido",
@@ -78,21 +79,23 @@ describe("nav del rediseño", () => {
   it("los chips de Patrimonio y Hogar apuntan a las rutas de siempre", () => {
     assert.deepEqual(
       SECTION_TABS.patrimonio.map((t) => t.href),
-      ["/patrimonio", "/ahorros", "/saldos", "/deuda"],
+      ["/patrimonio", "/ahorros", "/saldos", "/deuda", "/cargas"],
     );
     assert.deepEqual(
       SECTION_TABS.hogar.map((t) => t.href),
       ["/compartido", "/grupo", "/supermercado"],
     );
     assert.equal(activeSectionTab("patrimonio", "/deuda", null), "deuda");
+    assert.equal(activeSectionTab("patrimonio", "/cargas", null), "resumenes");
     assert.equal(activeSectionTab("hogar", "/supermercado", null), "super");
   });
 
-  it("Suscripción, Importar, Cargas y Compartir siguen fuera de la navegación", () => {
-    for (const href of ["/share-target", "/suscripcion", "/importar", "/cargas"]) {
+  it("Suscripción, Importar y Compartir siguen fuera de la navegación", () => {
+    for (const href of ["/share-target", "/suscripcion", "/importar"]) {
       assert.equal(isUnlistedNavHref(href), true);
       assert.equal(MAIN_TABS.some((t) => t.href === href), false);
     }
+    assert.equal(isUnlistedNavHref("/cargas"), false);
   });
 });
 

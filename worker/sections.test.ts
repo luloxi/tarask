@@ -292,7 +292,14 @@ describe("section apis", { concurrency: false }, () => {
     );
     assert.equal(res.status, 200);
     const body = (await res.json()) as {
-      items: Array<{ kind: string; typeLabel: string; count: number; fileName: string | null }>;
+      items: Array<{
+        kind: string;
+        typeLabel: string;
+        count: number;
+        fileName: string | null;
+        periodFrom: string | null;
+        periodTo: string | null;
+      }>;
     };
     const kinds = new Set(body.items.map((item) => item.kind));
     assert.equal(kinds.has("manual"), true);
@@ -301,6 +308,8 @@ describe("section apis", { concurrency: false }, () => {
     const statement = body.items.find((item) => item.kind === "statement");
     assert.match(statement?.typeLabel ?? "", /BBVA/);
     assert.equal(statement?.count, 4);
+    assert.ok(statement?.periodFrom);
+    assert.ok(statement?.periodTo);
     const receipt = body.items.find((item) => item.kind === "receipt");
     assert.equal(receipt?.fileName, "SUPER DEMO");
     assert.equal(receipt?.count, 1);

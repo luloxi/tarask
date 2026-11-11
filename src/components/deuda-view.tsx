@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { isAbortError } from "@/hooks/use-json-resource";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { SectionNav } from "@/components/section-nav";
 import { cn, formatArs, formatUsd, formatDateAr } from "@/lib/utils";
@@ -71,7 +72,12 @@ type PastStatement = {
   id: string;
   fileName: string | null;
   source: string;
+  status?: string;
   closedAt: string | null;
+  importedAt?: string | null;
+  rowCount?: number;
+  periodFrom?: string | null;
+  periodTo?: string | null;
 };
 
 type PastCuota = {
@@ -391,13 +397,16 @@ export function DeudaView() {
           <h2 className="text-sm font-semibold tracking-tight">
             {noCard ? "Sin tarjeta activa" : "Tu tarjeta"}
           </h2>
-          <p className="text-[11px] text-zinc-500">
+          <p className="text-[15px] text-[var(--muted-fg)]">
             {noCard
-              ? "La deuda está en cero. Los resúmenes viejos quedan en el historial."
-              : "El saldo de deuda lo cargás vos (o el resumen de tarjeta). No inventamos números desde la cuenta corriente."}
+              ? "Hoy no hay deuda. Los resúmenes viejos quedan en el historial."
+              : "El saldo lo cargás vos. No inventamos números desde la cuenta."}
           </p>
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <details className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2">
+          <summary className="cursor-pointer text-[15px] font-medium">Ajustes</summary>
+          <div className="mt-3 space-y-3">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <div>
             <FieldLabel>Tasa TNA %</FieldLabel>
             <input
@@ -510,6 +519,8 @@ export function DeudaView() {
             <span className="text-xs text-zinc-500">{settingsMsg}</span>
           )}
         </div>
+          </div>
+        </details>
       </Surface>
 
       <div className="flex justify-end">
@@ -547,18 +558,36 @@ export function DeudaView() {
       )}
 
       {(statements.length > 0 || pastCuotas.length > 0) && (
-        <details className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
-          <summary className="cursor-pointer px-4 py-3 text-sm font-medium">
-            Historial de resúmenes y cuotas
+        <details className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]" open>
+          <summary className="cursor-pointer px-4 py-3 text-[15px] font-medium">
+            Historial de resúmenes
           </summary>
-          <div className="space-y-3 px-4 pb-4 text-xs text-zinc-600 dark:text-zinc-300">
-            <p>Estos datos quedan guardados. No suman deuda activa.</p>
+          <div className="space-y-3 px-4 pb-4 text-[15px] text-[var(--muted-fg)]">
+            <p>
+              Lo que se importó en LlevaCuentas. No suma deuda de hoy.{" "}
+              <Link href="/cargas" className="font-medium text-[var(--accent-text)] underline-offset-2 hover:underline">
+                Ver todos
+              </Link>
+            </p>
             {statements.length > 0 && (
-              <ul className="space-y-1">
+              <ul className="space-y-2">
                 {statements.map((row) => (
                   <li key={row.id} className="flex justify-between gap-3">
-                    <span className="min-w-0 truncate">{row.fileName || row.source}</span>
-                    <span className="shrink-0 text-zinc-500">cerrado</span>
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium text-[var(--text)]">
+                        {row.fileName || row.source}
+                      </span>
+                      {row.periodFrom && row.periodTo && (
+                        <span className="block text-[13px]">
+                          {row.periodFrom === row.periodTo
+                            ? formatDateAr(row.periodFrom)
+                            : `${formatDateAr(row.periodFrom)} – ${formatDateAr(row.periodTo)}`}
+                        </span>
+                      )}
+                    </span>
+                    <span className="shrink-0 text-[13px]">
+                      {row.status === "closed" ? "cerrado" : "abierto"}
+                    </span>
                   </li>
                 ))}
               </ul>

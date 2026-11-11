@@ -56,6 +56,7 @@
  */
 
 import { loadFiwindEchoIds, type FiwindEchoDb } from "./fiwind-dups";
+import { loadLogicalDupIds, type LogicalDupDb } from "./logical-dups";
 
 const ARS_TOLERANCE = 0.01;
 const USD_TOLERANCE = 0.005;
@@ -1075,17 +1076,18 @@ function excludedMovementCacheKey(userId: string, ownAccountIdsRaw: string | nul
 }
 
 /**
- * Fiwind echo ids union internal-transfer ids. One Fiwind statement plus the
- * transfer statement and the income-twin statement, in parallel. A Fiwind
- * or income-twin failure leaves that half empty, so the rows it could not
- * classify still count. A transfer-statement failure returns no internal ids.
+ * Fiwind echo ids union same-day merchant copies union internal-transfer ids.
+ * One Fiwind statement, one logical-dup statement, plus the transfer and
+ * income-twin statements, in parallel. A Fiwind, logical-dup or income-twin
+ * failure leaves that half empty, so the rows it could not classify still
+ * count. A transfer-statement failure returns no internal ids.
  *
  * A successful load is reused for 60 seconds per isolate, keyed by user and
  * `OWN_ACCOUNT_IDS`. The empty fallback from a failed transfer statement is
  * not cached.
  */
 export async function loadExcludedMovementIds(
-  db: FiwindEchoDb & TransferClassDb,
+  db: FiwindEchoDb & TransferClassDb & LogicalDupDb,
   userId: string,
   ownAccountIdsRaw: string | null | undefined,
 ): Promise<MovementExclusion> {
@@ -1096,11 +1098,13 @@ export async function loadExcludedMovementIds(
     excludedMovementCache.delete(key);
   }
 
-  const [echoIds, transfer] = await Promise.all([
+  const [echoIds, logicalIds, transfer] = await Promise.all([
     loadFiwindEchoIds(db, userId),
+    loadLogicalDupIds(db, userId),
     loadTransferSnapshot(db, userId, ownAccountIdsRaw),
   ]);
   const excluded = new Set<string>(echoIds);
+  for (const id of logicalIds) excluded.add(id);
   for (const id of transfer.internalIds) excluded.add(id);
   const value: MovementExclusion = {
     excludedIds: [...excluded].sort(),

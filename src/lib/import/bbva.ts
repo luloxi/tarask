@@ -18,7 +18,7 @@ import {
   resolveImportBank,
   statementTxSource,
 } from "@/lib/import/source";
-import { logicalExpenseKey } from "@/lib/import/dedupe";
+import { logicalExpenseKey, logicalMerchantKey } from "@/lib/import/dedupe";
 
 export { logicalExpenseKey };
 
@@ -326,15 +326,32 @@ export async function importBbvaFile(opts: {
       }),
     ),
   );
+  const existingMerchantKeys = new Set(
+    existingLogical.flatMap((r) => {
+      const key = logicalMerchantKey({
+        date: r.date,
+        descriptionNormalized: r.descriptionNormalized,
+        amountArs: r.amountArs != null ? Number(r.amountArs) : null,
+        amountUsd: r.amountUsd != null ? Number(r.amountUsd) : null,
+      });
+      return key ? [key] : [];
+    }),
+  );
 
   const insertedLogical = new Set<string>();
+  const insertedMerchant = new Set<string>();
 
   const toInsert = uniqueMovements.filter((m) => {
     if (existingFp.has(m.fingerprint)) return false;
     const key = logicalExpenseKey(m);
     if (existingLogicalKeys.has(key)) return false;
     if (insertedLogical.has(key)) return false;
+    const merchantKey = logicalMerchantKey(m);
+    if (merchantKey && (existingMerchantKeys.has(merchantKey) || insertedMerchant.has(merchantKey))) {
+      return false;
+    }
     insertedLogical.add(key);
+    if (merchantKey) insertedMerchant.add(merchantKey);
     return true;
   });
   const alreadyExists = uniqueMovements.length - toInsert.length;

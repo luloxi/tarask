@@ -23,7 +23,7 @@ export const MAIN_TABS = [
   {
     href: "/patrimonio",
     label: "Patrimonio",
-    match: ["/patrimonio", "/ahorros", "/saldos", "/deuda"],
+    match: ["/patrimonio", "/ahorros", "/saldos", "/deuda", "/cargas"],
   },
   {
     href: "/compartido",
@@ -98,6 +98,7 @@ export const SECTION_TABS: Record<SectionId, readonly SectionTab[]> = {
     { id: "ahorros", label: "Ahorros", href: "/ahorros", path: "/ahorros" },
     { id: "saldos", label: "Saldos", href: "/saldos", path: "/saldos" },
     { id: "deuda", label: "Deuda", href: "/deuda", path: "/deuda" },
+    { id: "resumenes", label: "Resúmenes", href: "/cargas", path: "/cargas" },
   ],
   hogar: [
     { id: "hogar", label: "Gastos", href: "/compartido", path: "/compartido" },
@@ -124,10 +125,9 @@ export function activeSectionTab(
 
 /**
  * Rutas que no aparecen en la navegación: se llega por enlace, o redirigen.
- * (Suscripción, Importar y Cargas redirigen a Resumen.)
+ * (Suscripción e Importar redirigen a Resumen. Cargas es el historial de resúmenes.)
  */
 const UNLISTED_HREFS = new Set([
-  "/cargas",
   "/importar",
   "/suscripcion",
   "/share-target",

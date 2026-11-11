@@ -11,6 +11,7 @@ import {
   Upload,
 } from "lucide-react";
 import { ImportForm } from "@/components/import-form";
+import { SectionNav } from "@/components/section-nav";
 import { EmptyState, PageHeader, PageStack, Surface } from "@/components/ui";
 import { formatDateAr, cn } from "@/lib/utils";
 
@@ -24,6 +25,8 @@ type CargaItem = {
   status: string;
   source: string | null;
   detail: string | null;
+  periodFrom?: string | null;
+  periodTo?: string | null;
 };
 
 type Filter = "all" | "statement" | "receipt" | "manual";
@@ -60,7 +63,7 @@ export function CargasView() {
     networkError: "Error",
   });
   const items = useMemo(() => data?.items ?? [], [data?.items]);
-  const [filter, setFilter] = useState<Filter>("all");
+  const [filter, setFilter] = useState<Filter>("statement");
 
   useEffect(() => {
     function onSwitch() {
@@ -80,8 +83,8 @@ export function CargasView() {
   }, [items, filter]);
 
   const filters: Array<{ id: Filter; label: string }> = [
-    { id: "all", label: "Todas" },
     { id: "statement", label: "Resúmenes" },
+    { id: "all", label: "Todas" },
     { id: "receipt", label: "Tickets" },
     { id: "manual", label: "Manuales" },
   ];
@@ -89,8 +92,8 @@ export function CargasView() {
   return (
     <PageStack>
       <PageHeader
-        title="Cargas"
-        description="Tirale el Excel o el PDF. Los duplicados no entran de nuevo. El período de la tarjeta va a Deuda, no a la neta."
+        title="Resúmenes"
+        description="Historial de lo que importaste: BBVA Visa, caja y Fiwind. Un período, una fila."
         actions={
           <button
             type="button"
@@ -107,6 +110,7 @@ export function CargasView() {
           </button>
         }
       />
+      <SectionNav section="patrimonio" />
 
       <Surface elevated>
         <ImportForm
@@ -118,12 +122,9 @@ export function CargasView() {
         />
       </Surface>
 
-      <p className="text-[13px] leading-relaxed text-[var(--muted-fg)]">
-        <span className="font-medium text-[var(--foreground)]">Fiwind:</span>{" "}
-        Actividad → compartir Excel o CSV. Conversiones, TRANSFERENCIA ARS y
-        montos sueltos no entran en gastos.{" "}
-        <span className="font-medium text-[var(--foreground)]">BBVA:</span>{" "}
-        Tarjetas → Últimos movimientos (Excel).
+      <p className="text-[15px] leading-relaxed text-[var(--muted-fg)]">
+        Fiwind: Actividad en Excel o CSV. BBVA: Últimos movimientos o el PDF del
+        resumen. Los duplicados no se vuelven a cargar.
       </p>
 
       <div className="flex flex-wrap gap-1.5">
@@ -190,11 +191,18 @@ export function CargasView() {
                     </p>
                   </div>
                   <p className="mt-0.5 truncate text-sm text-[var(--muted-fg)]">
-                    {item.fileName ||
-                      (item.kind === "manual"
-                        ? `Gastos del ${formatDateAr(item.detail)}`
-                        : "Sin nombre")}
+                    {item.periodFrom && item.periodTo
+                      ? item.periodFrom === item.periodTo
+                        ? formatDateAr(item.periodFrom)
+                        : `${formatDateAr(item.periodFrom)} – ${formatDateAr(item.periodTo)}`
+                      : item.fileName ||
+                        (item.kind === "manual"
+                          ? `Gastos del ${formatDateAr(item.detail)}`
+                          : "Sin nombre")}
                   </p>
+                  {item.fileName && item.periodFrom && (
+                    <p className="truncate text-[13px] text-[var(--muted-fg)]">{item.fileName}</p>
+                  )}
                   <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
                     <span className="rounded-md bg-[var(--surface-muted)] px-2 py-0.5 font-medium text-[var(--foreground)]">
                       {item.count}{" "}

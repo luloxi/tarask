@@ -162,6 +162,27 @@ export function sparklineNetWorths(
   return values;
 }
 
+/**
+ * After the card was marked settled, later points must show debt 0.
+ * Earlier stored points stay as they were (Visa going down).
+ * Without a settle date we do not rewrite history.
+ */
+export function applySettledDebtHistory(
+  points: readonly PatrimonioPoint[],
+  opts: { settled: boolean; clearedOn: string | null },
+): PatrimonioPoint[] {
+  if (!opts.settled || !opts.clearedOn) return [...points];
+  return points.map((point) => {
+    if (point.date < opts.clearedOn!) return point;
+    return {
+      ...point,
+      debtArs: 0,
+      debtUsd: 0,
+      netWorthArs: point.assetsArs,
+    };
+  });
+}
+
 export function historyStartsAt(points: PatrimonioPoint[]): string | null {
   if (points.length === 0) return null;
   return [...points].sort((a, b) => (a.date < b.date ? -1 : 1))[0].date;
@@ -170,7 +191,7 @@ export function historyStartsAt(points: PatrimonioPoint[]): string | null {
 /** Spanish note. No em dash. */
 export function historyNote(firstDate: string | null): string {
   if (!firstDate) {
-    return "Todavía no hay puntos. El de hoy se guarda una vez por día.";
+    return "Todavía no hay puntos. El de hoy se guarda una vez por día. La deuda vieja de la Visa solo aparece si se guardó un saldo en ese momento; no la inventamos.";
   }
   const [year, month, day] = firstDate.split("-");
   return `El historial arranca el ${day}/${month}/${year}. Un punto por día.`;

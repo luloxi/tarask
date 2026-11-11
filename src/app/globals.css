@@ -4,63 +4,61 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * Paleta lulox (2026-11-04): pastel pintado en claro, neón con brillo leve en oscuro.
- * Fuente: /paleta-lulox.md. Los nombres viejos (--brand, --muted-fg, --warm…) siguen
- * existiendo como alias para que todas las pantallas hereden la paleta.
+ * Paleta calma (legacy LlevaCuentas): papel cálido + sage.
+ * Bajo contraste, sin neón ni lavados saturados. Legible en celu.
  */
 :root,
 html.light {
-  --bg: #fbf8f4;
-  --surface: #ffffff;
-  --text: #2b2a33;
-  --muted: #6e6b7b;
-  --border: #ece6ef;
-  --accent: #f4a99b; /* durazno */
-  --a2: #b8a9f0; /* lavanda */
-  --a3: #9ed9cc; /* menta */
-  --sky: #a9d4f5;
-  --ok: #8fd3a8;
-  --warn: #f6d68a;
-  --err: #f2a0a8;
+  --bg: #f8f3ea;
+  --surface: #fffdf8;
+  --text: #1c1915;
+  --muted: #6e675c;
+  --border: #e6dfd3;
+  --accent: #3d7362;
+  --a2: #6d7f74;
+  --a3: #8a9b8e;
+  --sky: #7a8f9a;
+  --ok: #3d7362;
+  --warn: #c4a06a;
+  --err: #a35d54;
 
-  /* derivados */
-  --on-accent: #2b2a33; /* nunca blanco sobre pastel */
-  --accent-text: #a04b3b; /* durazno oscuro, AA sobre blanco */
-  --ok-text: #2d6b46;
-  --warn-text: #8e6212;
-  --err-text: #a32f3f;
-  --surface-muted: #f6f1ec;
-  --border-strong: #ddd5e3;
+  --on-accent: #f8f3ea;
+  --accent-text: #2c5a4c;
+  --ok-text: #2c5a4c;
+  --warn-text: #7a5e32;
+  --err-text: #8a3f38;
+  --surface-muted: #f3eee4;
+  --border-strong: #d4ccbe;
   --glow: none;
   --glow-soft: none;
-  --card-shadow: 0 2px 12px rgb(120 90 70 / 8%);
-  --card-shadow-lg: 0 8px 28px -10px rgb(120 90 70 / 16%);
-  --wash-1: color-mix(in srgb, var(--accent) 22%, transparent);
-  --wash-2: color-mix(in srgb, var(--a2) 20%, transparent);
-  --wash-3: color-mix(in srgb, var(--a3) 20%, transparent);
-  --grain-opacity: 0.035;
-  --chart-1: #e58a78;
-  --chart-2: #8571d6;
-  --chart-3: #55ae9c;
-  --chart-err: #d9505f;
-  --chart-grid: color-mix(in srgb, var(--text) 12%, transparent);
-  --chart-axis: #6b6560;
+  --card-shadow: 0 1px 8px rgb(28 25 20 / 5%);
+  --card-shadow-lg: 0 6px 20px -12px rgb(28 25 20 / 12%);
+  --wash-1: transparent;
+  --wash-2: transparent;
+  --wash-3: transparent;
+  --grain-opacity: 0;
+  --chart-1: #3d7362;
+  --chart-2: #6d7f74;
+  --chart-3: #8a9b8e;
+  --chart-err: #a35d54;
+  --chart-grid: color-mix(in srgb, var(--text) 10%, transparent);
+  --chart-axis: #6e675c;
   --chart-tip-bg: var(--surface);
   --chart-tip-fg: var(--text);
   --chart-tip-border: var(--border-strong);
-  --cat-1: #059669;
-  --cat-2: #2563eb;
-  --cat-3: #d97706;
-  --cat-4: #db2777;
-  --cat-5: #7c3aed;
-  --cat-6: #0891b2;
-  --cat-7: #dc2626;
-  --cat-8: #65a30d;
-  --cat-9: #ea580c;
-  --cat-10: #4f46e5;
-  --cat-11: #0d9488;
-  --cat-12: #c026d3;
-  --cat-13: #64748b;
+  --cat-1: #3d7362;
+  --cat-2: #5a6f7a;
+  --cat-3: #a0844e;
+  --cat-4: #7a5e6a;
+  --cat-5: #5c6b58;
+  --cat-6: #4e6d78;
+  --cat-7: #8a3f38;
+  --cat-8: #6b7a4e;
+  --cat-9: #8a6a48;
+  --cat-10: #5a6278;
+  --cat-11: #3d6b62;
+  --cat-12: #6a5e72;
+  --cat-13: #6e675c;
 
   /* alias de compatibilidad */
   --background: var(--bg);
@@ -74,15 +72,13 @@ html.light {
   --brand-fg: var(--accent-text);
   --warm: var(--warn);
   --warm-soft: color-mix(in srgb, var(--warn) 30%, var(--surface));
-  --shadow-color: 120 90 70;
-  --ring: #d98a7a;
+  --shadow-color: 28 25 20;
+  --ring: #5a9a88;
   --muted-fg: var(--muted);
 
-  
-  /* escalas de Tailwind remapeadas a la paleta (pasteles en claro) */
-  --color-zinc-50: #f7f3ee; --color-zinc-100: #f1ecf3; --color-zinc-200: #ece6ef; --color-zinc-300: #ddd5e3;
-  --color-zinc-400: #8d8a9b; --color-zinc-500: #6e6b7b; --color-zinc-600: #5a5767; --color-zinc-700: #45434f;
-  --color-zinc-800: #33313c; --color-zinc-900: #2b2a33; --color-zinc-950: #1f1e26;
+  --color-zinc-50: #f8f3ea; --color-zinc-100: #f3eee4; --color-zinc-200: #e6dfd3; --color-zinc-300: #d4ccbe;
+  --color-zinc-400: #9c968a; --color-zinc-500: #6e675c; --color-zinc-600: #5a544a; --color-zinc-700: #433e36;
+  --color-zinc-800: #2a261f; --color-zinc-900: #1c1915; --color-zinc-950: #141210;
   --color-red-50: #fdecee; --color-red-100: #fbdde0; --color-red-200: #f7c3c8; --color-red-300: #f2a0a8;
   --color-red-400: #e9737f; --color-red-500: #d9505f; --color-red-600: #c03a4b; --color-red-700: #a32f3f;
   --color-red-800: #8a2736; --color-red-900: #6e1f2b; --color-red-950: #4a141d;
@@ -104,64 +100,64 @@ html.light {
 }
 
 html.dark {
-  --bg: #0b0b12;
-  --surface: #15151f;
-  --text: #f2f1f7;
-  --muted: #9a98ae;
-  --border: #26263a;
-  --accent: #ff4fd8; /* magenta */
-  --a2: #00e5ff; /* cian */
-  --a3: #b6ff3b; /* lima */
-  --sky: #7c5cff; /* violeta */
-  --ok: #39ff88;
-  --warn: #ffe14d;
-  --err: #ff4d6d;
+  --bg: #141210;
+  --surface: #1c1a17;
+  --text: #ece8e0;
+  --muted: #9c968a;
+  --border: #322e28;
+  --accent: #86b8a8;
+  --a2: #7a8a80;
+  --a3: #9aa89c;
+  --sky: #8aa0aa;
+  --ok: #86b8a8;
+  --warn: #c4a06a;
+  --err: #c48982;
 
-  --on-accent: #0b0b12;
-  --accent-text: #ff4fd8;
-  --ok-text: #39ff88;
-  --warn-text: #ffe14d;
-  --err-text: #ff6b85;
-  --surface-muted: #1b1b29;
-  --border-strong: #38384f;
-  --glow: 0 0 12px color-mix(in srgb, var(--accent) 50%, transparent);
-  --glow-soft: 0 0 10px color-mix(in srgb, var(--accent) 40%, transparent);
-  --card-shadow: 0 0 0 1px rgb(255 255 255 / 0.01);
-  --card-shadow-lg: 0 10px 32px -12px rgb(0 0 0 / 0.6);
-  --wash-1: color-mix(in srgb, var(--accent) 13%, transparent);
-  --wash-2: color-mix(in srgb, var(--a2) 9%, transparent);
-  --wash-3: color-mix(in srgb, var(--sky) 12%, transparent);
-  --grain-opacity: 0.02;
-  --chart-1: #ff4fd8;
-  --chart-2: #00e5ff;
-  --chart-3: #b6ff3b;
-  --chart-err: #ff4d6d;
-  --chart-grid: rgb(255 255 255 / 0.13);
-  --chart-axis: #c4c2d6;
-  --chart-tip-bg: #1b1b2b;
-  --chart-tip-fg: #f4f3fb;
-  --chart-tip-border: color-mix(in srgb, var(--accent) 55%, #1b1b2b);
-  --cat-1: #3dffa8;
-  --cat-2: #5aa9ff;
-  --cat-3: #ffb21f;
-  --cat-4: #ff4fd8;
-  --cat-5: #b794ff;
-  --cat-6: #00e5ff;
-  --cat-7: #ff5470;
-  --cat-8: #b6ff3b;
-  --cat-9: #ff8a3d;
-  --cat-10: #8f9bff;
-  --cat-11: #2dfad0;
-  --cat-12: #f26bff;
-  --cat-13: #aeb8d6;
+  --on-accent: #141210;
+  --accent-text: #b3d4c8;
+  --ok-text: #b3d4c8;
+  --warn-text: #d4b88a;
+  --err-text: #d4a8a2;
+  --surface-muted: #24211d;
+  --border-strong: #433e36;
+  --glow: none;
+  --glow-soft: none;
+  --card-shadow: none;
+  --card-shadow-lg: none;
+  --wash-1: transparent;
+  --wash-2: transparent;
+  --wash-3: transparent;
+  --grain-opacity: 0;
+  --chart-1: #86b8a8;
+  --chart-2: #a8b8ae;
+  --chart-3: #9aa89c;
+  --chart-err: #c48982;
+  --chart-grid: rgb(236 232 224 / 0.12);
+  --chart-axis: #9c968a;
+  --chart-tip-bg: #1c1a17;
+  --chart-tip-fg: #ece8e0;
+  --chart-tip-border: #433e36;
+  --cat-1: #86b8a8;
+  --cat-2: #8aa0aa;
+  --cat-3: #c4a06a;
+  --cat-4: #b8a0aa;
+  --cat-5: #9aa89c;
+  --cat-6: #8a9eaa;
+  --cat-7: #c48982;
+  --cat-8: #a8b88a;
+  --cat-9: #c4b08a;
+  --cat-10: #a0a8b8;
+  --cat-11: #86b0a8;
+  --cat-12: #b0a8b8;
+  --cat-13: #9c968a;
 
   --shadow-color: 0 0 0;
-  --ring: #00e5ff;
+  --ring: #86b8a8;
 
   
-  --color-zinc-50: #f2f1f7; --color-zinc-100: #e6e5ef; --color-zinc-200: #d2d0e0; --color-zinc-300: #b9b7cc;
-  --color-zinc-400: #9a98ae; --color-zinc-500: #9a98ae; --color-zinc-600: #b3b1c6; --color-zinc-700: #c9c7d8;
-  --color-zinc-800: #26263a; --color-zinc-900: #15151f; --color-zinc-950: #0b0b12;
+  --color-zinc-50: #ece8e0; --color-zinc-100: #e6dfd3; --color-zinc-200: #d4ccbe; --color-zinc-300: #b8b0a4;
+  --color-zinc-400: #9c968a; --color-zinc-500: #9c968a; --color-zinc-600: #b8b0a4; --color-zinc-700: #d4ccbe;
+  --color-zinc-800: #322e28; --color-zinc-900: #1c1a17; --color-zinc-950: #141210;
   --color-red-50: #ffe5ea; --color-red-100: #ffd0d9; --color-red-200: #ffa9b9; --color-red-300: #ff8099;
   --color-red-400: #ff4d6d; --color-red-500: #ff4d6d; --color-red-600: #e03b5a; --color-red-700: #ff6b85;
   --color-red-800: #8a1a31; --color-red-900: #5e1424; --color-red-950: #2b0e17;
@@ -297,27 +293,9 @@ textarea::placeholder {
   background: var(--bg);
 }
 
-.app-shell::before {
-  content: "";
-  pointer-events: none;
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background:
-    radial-gradient(ellipse 70% 38% at 8% -6%, var(--wash-1), transparent 65%),
-    radial-gradient(ellipse 60% 34% at 100% 4%, var(--wash-2), transparent 62%),
-    radial-gradient(ellipse 70% 40% at 50% 112%, var(--wash-3), transparent 65%),
-    var(--bg);
-}
-
+.app-shell::before,
 .app-shell::after {
-  content: "";
-  pointer-events: none;
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  opacity: var(--grain-opacity);
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.35  0 0 0 0 0.3  0 0 0 0 0.25  0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  content: none;
 }
 
 @keyframes lc-fade-up {
@@ -539,11 +517,11 @@ textarea::placeholder {
 .lc-btn-primary {
   background: var(--accent);
   color: var(--on-accent);
-  box-shadow: 0 2px 10px color-mix(in srgb, var(--accent) 35%, transparent);
+  box-shadow: none;
 }
 
 html.dark .lc-btn-primary {
-  box-shadow: var(--glow);
+  box-shadow: none;
 }
 
 .lc-btn-primary:hover:not(:disabled) {
@@ -627,7 +605,6 @@ html.dark .lc-btn-primary {
 }
 
 html.dark .lc-chip[data-active="true"] {
-  box-shadow: var(--glow-soft);
   color: var(--accent-text);
 }
 
@@ -679,7 +656,6 @@ html.dark .lc-chip[data-active="true"] {
 }
 
 html.dark .lc-seg-item[data-active="true"] {
-  box-shadow: var(--glow-soft);
   color: var(--accent-text);
 }
 
@@ -783,24 +759,19 @@ html.dark .lc-seg-item[data-active="true"] {
   letter-spacing: 0;
 }
 
-/* Brillo suave del tema oscuro para íconos y valores activos */
 html.dark .lc-glow {
-  text-shadow: 0 0 6px color-mix(in srgb, var(--accent) 45%, transparent);
+  text-shadow: none;
 }
 
-/* Ícono activo de la barra: brillo suave en oscuro */
 html.dark nav[aria-label="Secciones"] a[aria-current="page"] svg,
 html.dark nav[aria-label="Secciones"] button[aria-expanded="true"] svg {
   color: var(--accent);
-  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 55%, transparent));
+  filter: none;
 }
 
-html.dark .lc-spark-line {
-  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--chart-1) 55%, transparent));
-}
-
+html.dark .lc-spark-line,
 html.dark .lc-spark-dot {
-  filter: drop-shadow(0 0 5px var(--chart-1));
+  filter: none;
 }
 
 

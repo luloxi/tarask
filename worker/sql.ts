@@ -31,10 +31,11 @@
  *   accounting; that difference is intentional.
  *
  * Fiwind numeric echoes are paired in `worker/fiwind-dups.ts`
- * (`pairFiwindEchoes`), outside SQL. The Workers free plan cannot spend
- * the CPU of a correlated scan. Each request loads candidates for the
- * requesting user with one indexed query and passes the numeric ids to
- * drop into `expenseSql` / `bankAccountingSql` / `consumosVisibleSql`.
+ * (`pairFiwindEchoes`), outside SQL. Same-day named copies (email,
+ * statement, Fiwind) are paired in `worker/logical-dups.ts`. The Workers
+ * free plan cannot spend the CPU of a correlated scan. Each request loads
+ * candidates for the requesting user with indexed queries and passes the
+ * ids to drop into `expenseSql` / `bankAccountingSql` / `consumosVisibleSql`.
  * An empty set adds no clause, so `EXPENSE_SQL` and `BANK_ACCOUNTING_SQL`
  * stay valid for callers that have no dup set. A loader error counts
  * every row.

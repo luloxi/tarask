@@ -1,4 +1,5 @@
 import type { Env } from "./env";
+import { readSso, ssoClearCookie } from "./lulox-sso";
 import {
   OAUTH_COOKIE,
   base64url,
@@ -41,7 +42,7 @@ type OAuthState = {
  */
 export async function requireUser(req: Request, env: Env): Promise<SessionUser | Response> {
   const token = readSessionCookie(req);
-  if (!token) return json({ error: "No autenticado" }, 401);
+  if (!token) return (await ssoUser(req, env)) ?? json({ error: "No autenticado" }, 401);
   const tokenHash = await sha256Hex(token);
   const row = await env.DB.prepare(
     `SELECT u.id AS id, u.email AS email, u.name AS name, u.image AS image
@@ -52,8 +53,20 @@ export async function requireUser(req: Request, env: Env): Promise<SessionUser |
   )
     .bind(tokenHash, Date.now())
     .first<SessionUser>();
-  if (!row?.id || !row.email) return json({ error: "No autenticado" }, 401);
+  if (!row?.id || !row.email) return (await ssoUser(req, env)) ?? json({ error: "No autenticado" }, 401);
   return row;
+}
+
+/**
+ * Single sign-on from Genkilulox: a valid `lulox_sso` cookie (HMAC + expiry checked in
+ * lulox-sso.ts) counts as a session only for an email that is on Tarask's own allowlist
+ * and already has a Tarask user (first login stays the Google flow here).
+ */
+async function ssoUser(req: Request, env: Env): Promise<SessionUser | null> {
+  const sso = await readSso(req, env.LULOX_SSO_SECRET);
+  if (!sso || !(await isEmailAllowed(env, sso.email))) return null;
+  const row = await env.DB.prepare("SELECT id, email, name, image FROM auth_user WHERE email = ? LIMIT 1").bind(sso.email).first<SessionUser>();
+  return row?.id ? row : null;
 }
 
 export function isUser(value: SessionUser | Response): value is SessionUser {
@@ -148,7 +161,8 @@ export async function handleLogout(req: Request, env: Env): Promise<Response> {
     const tokenHash = await sha256Hex(token);
     await env.DB.prepare("DELETE FROM auth_session WHERE token = ?").bind(tokenHash).run();
   }
-  return json({ ok: true }, 200, [clearSessionCookie(req)]);
+  // Leaving Tarask also ends the shared login, or the SSO cookie would sign you right back in.
+  return json({ ok: true }, 200, [clearSessionCookie(req), ssoClearCookie()]);
 }
 
 async function isEmailAllowed(env: Env, email: string): Promise<boolean> {

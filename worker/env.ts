@@ -37,6 +37,8 @@ export interface Env {
   GOOGLE_CLIENT_SECRET?: string;
   /** Reused only as an HMAC key for the OAuth state cookie. Never log it. */
   BETTER_AUTH_SECRET?: string;
+  /** Shared with Genkilulox: verifies the parent-domain lulox_sso cookie (single sign-on). */
+  LULOX_SSO_SECRET?: string;
   ALLOWED_EMAILS?: string;
   /** Roommate payee tokens ("ANA+PEREZ,ANITA"). Set as a Worker secret/var, never commit. */
   REINTEGRO_PAYEES?: string;

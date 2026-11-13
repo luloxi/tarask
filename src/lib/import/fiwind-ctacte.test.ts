@@ -98,7 +98,7 @@ describe("Fiwind Capital Estado de Cuenta", () => {
     assert.equal(m.date, "2026-09-29");
     assert.equal(m.amountArs, 20.07);
     assert.equal(m.amountUsd, null);
-    assert.equal(m.descriptionNormalized, "Cuenta comitente: Movimiento Manual / Ajuste de saldo residual");
+    assert.equal(m.descriptionNormalized, "Transferencia interna - Cuenta comitente: Movimiento Manual / Ajuste de saldo residual");
     assert.equal(m.isCredit, true);
     assert.match(m.fingerprint, /^[a-f0-9]{32}$/);
     // Broker-account bookkeeping is never a gasto or an ingreso.
@@ -124,9 +124,9 @@ describe("Fiwind Capital Estado de Cuenta", () => {
       [dep!.date, dep!.amountArs, dep!.amountUsd, dep!.isCredit],
       ["2026-09-01", 150000, null, true],
     );
-    assert.equal(dep!.descriptionNormalized, "Cuenta comitente: Depósito transferencia bancaria");
+    assert.equal(dep!.descriptionNormalized, "Transferencia interna - Cuenta comitente: Depósito transferencia bancaria");
     assert.deepEqual([buy!.date, buy!.amountArs, buy!.isCredit], ["2026-09-08", 50000, false]);
-    assert.equal(buy!.descriptionNormalized, "Cuenta comitente: Compra FONDO EJEMPLO A");
+    assert.equal(buy!.descriptionNormalized, "Transferencia interna - Cuenta comitente: Compra FONDO EJEMPLO A");
     assert.deepEqual([adj!.date, adj!.amountArs], ["2026-09-29", 20.07]);
     assert.deepEqual([rent!.date, rent!.amountArs, rent!.amountUsd], ["2026-09-15", null, 12.5]);
     // Every line is bookkeeping on the broker account.

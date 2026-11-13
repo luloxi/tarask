@@ -74,7 +74,7 @@ export function classifyFiwindTipo(tipo: string): FiwindKind {
   // Fiwind Capital "Estado de Cuenta" (cuenta comitente, PDF): broker ledger
   // lines (ajustes, compra/venta de títulos, cupones, giros). Never consumer
   // spend, so they stay out of gastos like the other wallet noise.
-  if (/^CUENTA COMITENTE\b/.test(u)) return "transfer";
+  if (/\bCUENTA COMITENTE\b/.test(u)) return "transfer";
   if (/^CONVERSION\b/.test(u)) return "conversion";
   if (/^(GANANCIA|RENDIMIENTO)\b/.test(u)) return "yield";
   if (

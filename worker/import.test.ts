@@ -7,6 +7,7 @@ import { markdownToStatementText } from "../src/lib/bbva/parse-pdf";
 import { buildImportPayloads } from "../src/lib/import/client";
 import { parseStatementFile } from "../src/lib/import/parse-statement";
 import type { SessionUser } from "./auth";
+import { BANK_ACCOUNTING_SQL, EXPENSE_SQL } from "./sql";
 import { envFor, fixture, openDb, other, owner } from "./test-helpers";
 import {
   MAX_MOVEMENTS_PER_REQUEST,
@@ -223,9 +224,19 @@ describe("Fiwind Estado de Cuenta (PDF) import", () => {
     assert.equal(first.bank, "Fiwind");
     const rows = db.prepare("SELECT description_normalized d, amount_ars, amount_usd, category_id, bank FROM transactions ORDER BY date").all() as Array<Record<string, string | null>>;
     assert.equal(rows.length, 4);
-    assert.ok(rows.every((r) => String(r.d).startsWith("Cuenta comitente")));
+    assert.ok(rows.every((r) => String(r.d).startsWith("Transferencia interna - Cuenta comitente")));
     assert.ok(rows.every((r) => r.category_id === "c-conv"));
     assert.equal(rows.filter((r) => r.amount_usd != null).length, 1);
+    // Read-time totals: nothing from the broker ledger is a gasto, and the deposit/coupon are not ingresos.
+    assert.equal(
+      count(db, `SELECT COUNT(*) n FROM transactions t WHERE ${EXPENSE_SQL}`),
+      0,
+      "broker ledger rows never count as gastos",
+    );
+    assert.equal(
+      count(db, `SELECT COUNT(*) n FROM transactions t WHERE ${BANK_ACCOUNTING_SQL}`),
+      4,
+    );
     const again = (await (await post(owner, env, payloads[0])).json()) as { inserted: number };
     assert.equal(again.inserted, 0);
     assert.equal(count(db, "SELECT COUNT(*) n FROM transactions"), 4);

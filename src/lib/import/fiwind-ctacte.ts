@@ -18,8 +18,9 @@
  * until the next dated row or section marker".
  *
  * Everything here is accounting on the broker account (ajustes, compra/venta de
- * títulos, giros): the description is prefixed with "Cuenta comitente" so
- * `classifyFiwindTipo` keeps it out of gastos and ingresos.
+ * títulos, giros): the description is prefixed with "Transferencia interna -
+ * Cuenta comitente: " so `classifyFiwindTipo` and the Worker's read-time SQL
+ * (worker/sql.ts matches "transferencia interna") keep it out of gastos and ingresos.
  */
 
 import { makeFingerprint, type BbvaMovement } from "@/lib/bbva/parse";
@@ -43,6 +44,9 @@ const SECTION_END_RE =
   /Saldo\s+al\s+\d|Sistema\s+aprobado|Domicilio:|Hoja\s+N[°º]|Saldo\s+Anterior|^Disponible\b/i;
 const HAS_WORDS_RE = /[A-Za-zÁÉÍÓÚáéíóú]{3,}/;
 const AMOUNT_RE = /^-?(?:\d{1,3}(?:[.,]\d{3})+|\d+)(?:[.,]\d+)?$/;
+
+/** Read-time SQL (worker/sql.ts) treats "transferencia interna" as own-account movement. */
+export const DESCRIPTION_PREFIX = "Transferencia interna - Cuenta comitente: ";
 
 export function looksLikeFiwindCtaCte(text: string): boolean {
   return (
@@ -182,7 +186,7 @@ export function parseFiwindCtaCteText(text: string): FiwindCtaCteResult {
       unreadable.push(`${b.date} ${detail} (${symbol})`);
       return;
     }
-    const description = `Cuenta comitente: ${detail}`;
+    const description = `${DESCRIPTION_PREFIX}${detail}`;
     const abs = Math.abs(neto);
     if (abs < 0.0001) return;
     const kind = classifyFiwindTipo(description);

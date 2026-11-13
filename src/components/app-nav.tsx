@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   Home,
   List,
@@ -45,7 +45,6 @@ const MORE_ICONS: Record<string, typeof Home> = {
 
 export function AppNav() {
   const pathname = usePathname();
-  const router = useRouter();
   const { resolved, toggle } = useTheme();
   const [isAdmin, setIsAdmin] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -82,7 +81,8 @@ export function AppNav() {
       // ignore
     }
     invalidateApi();
-    router.push("/login");
+    // Full navigation: nothing of the signed-in account stays in memory or in the page.
+    window.location.replace("/login?signedout=1");
   }
 
   const current = activeMainTab(pathname);

@@ -1,0 +1,147 @@
+%PDF-1.3
+%“Œ‹ž ReportLab Generated PDF document (opensource)
+1 0 obj
+<<
+/F1 2 0 R /F2 3 0 R
+>>
+endobj
+2 0 obj
+<<
+/BaseFont /Helvetica /Encoding /WinAnsiEncoding /Name /F1 /Subtype /Type1 /Type /Font
+>>
+endobj
+3 0 obj
+<<
+/BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding /Name /F2 /Subtype /Type1 /Type /Font
+>>
+endobj
+4 0 obj
+<<
+/Contents 8 0 R /MediaBox [ 0 0 841.8898 595.2756 ] /Parent 7 0 R /Resources <<
+/Font 1 0 R /ProcSet [ /PDF /Text /ImageB /ImageC /ImageI ]
+>> /Rotate 0 /Trans <<
+
+>> 
+  /Type /Page
+>>
+endobj
+5 0 obj
+<<
+/PageMode /UseNone /Pages 7 0 R /Type /Catalog
+>>
+endobj
+6 0 obj
+<<
+/Author (anonymous) /CreationDate (D:20261113032839+00'00') /Creator (anonymous) /Keywords () /ModDate (D:20261113032839+00'00') /Producer (ReportLab PDF Library - \(opensource\)) 
+  /Subject (unspecified) /Title (RptCtasCorrientesConsolidado) /Trapped /False
+>>
+endobj
+7 0 obj
+<<
+/Count 1 /Kids [ 4 0 R ] /Type /Pages
+>>
+endobj
+8 0 obj
+<<
+/Length 3624
+>>
+stream
+1 0 0 1 0 0 cm  BT /F1 12 Tf 14.4 TL ET
+BT /F1 7 Tf 8.4 TL ET
+BT 1 0 0 1 40 565.2756 Tm (Fiwind Capital S.A.) Tj T* ET
+BT 1 0 0 1 40 556.2756 Tm (Calle Falsa 123, piso 1, Ciudad Ejemplo, CP: 1000) Tj T* ET
+BT 1 0 0 1 40 547.2756 Tm (Telefono: 0000000000) Tj T* ET
+BT 1 0 0 1 40 538.2756 Tm (ejemplo@fiwind.invalid) Tj T* ET
+BT 1 0 0 1 40 529.2756 Tm (CUIT: 30-00000000-0) Tj T* ET
+BT /F2 10 Tf 12 TL ET
+BT 1 0 0 1 380.9449 565.2756 Tm (Estado de Cuenta) Tj T* ET
+BT /F1 8 Tf 9.6 TL ET
+BT 1 0 0 1 581.8898 550.2756 Tm (Fecha desde:   1/9/2026) Tj T* ET
+BT 1 0 0 1 581.8898 540.2756 Tm (Fecha hasta:  30/9/2026) Tj T* ET
+BT 1 0 0 1 340.9449 520.2756 Tm (Cuenta: Titular Ejemplo - \(99999\)) Tj T* ET
+BT 1 0 0 1 340.9449 510.2756 Tm (Mail: titular@example.com - CUIT: 20000000001) Tj T* ET
+BT /F2 7 Tf 8.4 TL ET
+BT 1 0 0 1 40 490.2756 Tm (Concertaci\363n) Tj T* ET
+BT 1 0 0 1 100 490.2756 Tm (Liquidaci\363n) Tj T* ET
+BT 1 0 0 1 170 490.2756 Tm (Detalle) Tj T* ET
+BT 1 0 0 1 330 490.2756 Tm (Valor Nominal) Tj T* ET
+BT 1 0 0 1 390 490.2756 Tm (Importe Bruto) Tj T* ET
+BT 1 0 0 1 450 490.2756 Tm (Precio) Tj T* ET
+BT 1 0 0 1 495 490.2756 Tm (Importe Neto) Tj T* ET
+BT 1 0 0 1 560 490.2756 Tm (Saldo) Tj T* ET
+BT 1 0 0 1 610 490.2756 Tm (Simbolo) Tj T* ET
+BT /F1 7 Tf 8.4 TL ET
+BT 1 0 0 1 60 470.2756 Tm (Disponible) Tj T* ET
+BT 1 0 0 1 70 460.2756 Tm (Monedas) Tj T* ET
+BT 1 0 0 1 80 450.2756 Tm (Pesos - $) Tj T* ET
+BT 1 0 0 1 170 436.2756 Tm (Saldo Anterior) Tj T* ET
+BT 1 0 0 1 562.371 436.2756 Tm (-20.0700) Tj T* ET
+BT 1 0 0 1 612 436.2756 Tm ($) Tj T* ET
+BT 1 0 0 1 40 411.2756 Tm (1/9/2026) Tj T* ET
+BT 1 0 0 1 100 411.2756 Tm (1/9/2026) Tj T* ET
+BT 1 0 0 1 170 420.2756 Tm (Dep\363sito transferencia bancaria) Tj T* ET
+BT 1 0 0 1 416.918 411.2756 Tm (150000.00) Tj T* ET
+BT 1 0 0 1 516.918 411.2756 Tm (150000.00) Tj T* ET
+BT 1 0 0 1 556.918 411.2756 Tm (149979.93) Tj T* ET
+BT 1 0 0 1 612 411.2756 Tm ($) Tj T* ET
+BT 1 0 0 1 40 384.2756 Tm (8/9/2026) Tj T* ET
+BT 1 0 0 1 100 384.2756 Tm (10/9/2026) Tj T* ET
+BT 1 0 0 1 170 393.2756 Tm (Compra FONDO EJEMPLO A) Tj T* ET
+BT 1 0 0 1 418.479 384.2756 Tm (-50000.00) Tj T* ET
+BT 1 0 0 1 518.479 384.2756 Tm (-50000.00) Tj T* ET
+BT 1 0 0 1 560.81 384.2756 Tm (99979.93) Tj T* ET
+BT 1 0 0 1 612 384.2756 Tm ($) Tj T* ET
+BT 1 0 0 1 40 357.2756 Tm (29/9/2026) Tj T* ET
+BT 1 0 0 1 100 357.2756 Tm (29/9/2026) Tj T* ET
+BT 1 0 0 1 170 366.2756 Tm (Movimiento Manual / Ajuste de saldo) Tj T* ET
+BT 1 0 0 1 170 348.2756 Tm (residual cuenta 99999 \(ARS\)) Tj T* ET
+BT 1 0 0 1 432.486 357.2756 Tm (20.07) Tj T* ET
+BT 1 0 0 1 532.486 357.2756 Tm (20.07) Tj T* ET
+BT 1 0 0 1 556.918 357.2756 Tm (100000.00) Tj T* ET
+BT 1 0 0 1 612 357.2756 Tm ($) Tj T* ET
+BT 1 0 0 1 170 330.2756 Tm (Saldo al 30/09/2026) Tj T* ET
+BT 1 0 0 1 556.918 330.2756 Tm (100000.00) Tj T* ET
+BT 1 0 0 1 612 330.2756 Tm ($) Tj T* ET
+BT 1 0 0 1 80 312.2756 Tm (Dolares - USD) Tj T* ET
+BT 1 0 0 1 170 298.2756 Tm (Saldo Anterior) Tj T* ET
+BT 1 0 0 1 568.594 298.2756 Tm (0.0000) Tj T* ET
+BT 1 0 0 1 612 298.2756 Tm (USD) Tj T* ET
+BT 1 0 0 1 40 273.2756 Tm (15/9/2026) Tj T* ET
+BT 1 0 0 1 100 273.2756 Tm (15/9/2026) Tj T* ET
+BT 1 0 0 1 170 282.2756 Tm (Cobro de renta TITULO EJEMPLO) Tj T* ET
+BT 1 0 0 1 432.486 273.2756 Tm (12.50) Tj T* ET
+BT 1 0 0 1 532.486 273.2756 Tm (12.50) Tj T* ET
+BT 1 0 0 1 572.486 273.2756 Tm (12.50) Tj T* ET
+BT 1 0 0 1 612 273.2756 Tm (USD) Tj T* ET
+BT 1 0 0 1 170 255.2756 Tm (Saldo al 30/09/2026) Tj T* ET
+BT 1 0 0 1 572.486 255.2756 Tm (12.50) Tj T* ET
+BT 1 0 0 1 612 255.2756 Tm (USD) Tj T* ET
+BT /F1 6 Tf 7.2 TL ET
+BT 1 0 0 1 360.9449 20 Tm (Sistema aprobado por C.N.V.) Tj T* ET
+ 
+endstream
+endobj
+xref
+0 9
+0000000000 65535 f 
+0000000061 00000 n 
+0000000102 00000 n 
+0000000209 00000 n 
+0000000321 00000 n 
+0000000524 00000 n 
+0000000592 00000 n 
+0000000873 00000 n 
+0000000932 00000 n 
+trailer
+<<
+/ID 
+[<71039547f9a5df284733478e6bdf5cd3><71039547f9a5df284733478e6bdf5cd3>]
+% ReportLab generated PDF document -- digest (opensource)
+
+/Info 6 0 R
+/Root 5 0 R
+/Size 9
+>>
+startxref
+4607
+%%EOF

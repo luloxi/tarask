@@ -16,7 +16,8 @@ import { handleDashboard } from "./dashboard";
 import { handleIncomeByMonth, handleSpendingByCategory, handleSpendingSeries } from "./insights";
 import { handleGrupo } from "./grupo";
 import { handleMesAMes } from "./mes-a-mes";
-import { handleReceipts } from "./receipts";
+import { handleReceiptFile, handleReceipts } from "./receipts";
+import { handleImportStatement, handlePdfText } from "./import";
 import type { Env, WorkerContext } from "./env";
 import {
   captureDailySnapshots,
@@ -101,6 +102,9 @@ const worker = {
       if (path === "/api/stats/mes-a-mes") return await handleMesAMes(req, env, user);
       if (path === "/api/grupo") return await handleGrupo(req, env, user);
       if (path === "/api/receipts") return await handleReceipts(req, env, user);
+      if (path.startsWith("/api/receipts/file/")) return await handleReceiptFile(req, env, user);
+      if (path === "/api/import/statement") return await handleImportStatement(req, env, user);
+      if (path === "/api/import/pdf-text") return await handlePdfText(req, env);
       if (path === "/api/admin/allowed-emails") return await handleAllowedEmails(req, env, user);
       if (path === "/api/household/agent-token") return await handleAgentToken(req, env, user);
       if (path.startsWith("/api/fiwind/")) return await handleFiwindReclassify(req, env, user);

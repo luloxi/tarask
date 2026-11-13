@@ -71,6 +71,10 @@ export function classifyFiwindTipo(tipo: string): FiwindKind {
   if (/\b(A|DE)\s+(UNA\s+)?CUENTA\s+TUYA\b/.test(u)) return "transfer";
   // Grocery (“COMPRA SUPER ARS”), not Compra KO / Compra USDC.
   if (/^COMPRA\s+SUPER\b/.test(u)) return "spend";
+  // Fiwind Capital "Estado de Cuenta" (cuenta comitente, PDF): broker ledger
+  // lines (ajustes, compra/venta de títulos, cupones, giros). Never consumer
+  // spend, so they stay out of gastos like the other wallet noise.
+  if (/^CUENTA COMITENTE\b/.test(u)) return "transfer";
   if (/^CONVERSION\b/.test(u)) return "conversion";
   if (/^(GANANCIA|RENDIMIENTO)\b/.test(u)) return "yield";
   if (

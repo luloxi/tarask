@@ -1,5 +1,4 @@
-import { createHash } from "crypto";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { fingerprint32 } from "@/lib/hash";
 import {
   amountFingerprintKey,
   fingerprintParts,
@@ -243,7 +242,7 @@ function makeFingerprint(m: Omit<BbvaMovement, "fingerprint">, cupon: string | n
     // cupón distinguishes same-day same-merchant same-amount (common with Ubers)
     cupon ?? "",
   ]);
-  return createHash("sha256").update(base).digest("hex").slice(0, 32);
+  return fingerprint32(base);
 }
 
 /** Workers AI is missing, or it could not read the PDF. */
@@ -377,14 +376,28 @@ export function markdownToStatementText(markdown: string): string {
   return joined.join("\n");
 }
 
-async function readAiMarkdown(data: ArrayBuffer | Buffer): Promise<string> {
+/**
+ * Where the PDF text comes from. The browser import flow passes a function that
+ * posts the file to `/api/import/pdf-text` (the Worker runs Workers AI
+ * `toMarkdown`). Without one, fall back to the legacy OpenNext runtime, which
+ * is loaded lazily so browser bundles never include it.
+ */
+export type PdfMarkdownSource = (data: ArrayBuffer | Uint8Array) => Promise<string>;
+
+async function legacyAiMarkdown(data: ArrayBuffer | Uint8Array): Promise<string> {
   if (process.env.NEXT_PHASE === "phase-production-build") {
     throw new PdfImportUnavailableError(PDF_WORKERS_MESSAGE);
   }
-  let ai: CloudflareEnv["AI"] | undefined;
+  let ai: { toMarkdown?: (input: unknown) => Promise<unknown> } | undefined;
   try {
-    const { env } = await getCloudflareContext({ async: true });
-    ai = (env as CloudflareEnv).AI;
+    const moduleName = "@opennextjs/cloudflare";
+    const mod = (await import(
+      /* webpackIgnore: true */ /* turbopackIgnore: true */ moduleName
+    )) as {
+      getCloudflareContext: (opts: { async: true }) => Promise<{ env: { AI?: typeof ai } }>;
+    };
+    const { env } = await mod.getCloudflareContext({ async: true });
+    ai = env.AI;
   } catch {
     ai = undefined;
   }
@@ -397,7 +410,9 @@ async function readAiMarkdown(data: ArrayBuffer | Buffer): Promise<string> {
   bytes.set(source);
   const blob = new Blob([bytes], { type: "application/pdf" });
   const result = await ai.toMarkdown({ name: "statement.pdf", blob });
-  const doc = Array.isArray(result) ? result[0] : result;
+  const doc = (Array.isArray(result) ? result[0] : result) as
+    | { format?: string; data?: string }
+    | undefined;
   if (!doc || doc.format === "error" || !doc.data?.trim()) {
     throw new PdfImportUnavailableError(PDF_WORKERS_MESSAGE);
   }
@@ -405,9 +420,10 @@ async function readAiMarkdown(data: ArrayBuffer | Buffer): Promise<string> {
 }
 
 export async function extractPdfText(
-  data: ArrayBuffer | Buffer,
+  data: ArrayBuffer | Uint8Array,
+  source: PdfMarkdownSource = legacyAiMarkdown,
 ): Promise<string> {
-  const markdown = await readAiMarkdown(data);
+  const markdown = await source(data);
   return markdownToStatementText(markdown);
 }
 

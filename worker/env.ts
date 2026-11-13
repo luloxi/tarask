@@ -31,6 +31,7 @@ export interface Env {
   };
   AI: {
     toMarkdown(documents: unknown, options?: unknown): Promise<unknown>;
+    run?(model: string, input: unknown): Promise<unknown>;
   };
   ASSETS: { fetch(input: Request): Promise<Response> };
   GOOGLE_CLIENT_ID?: string;

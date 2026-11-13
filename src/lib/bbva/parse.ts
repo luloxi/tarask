@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import { createHash } from "crypto";
+import { fingerprint32 } from "@/lib/hash";
 import {
   amountFingerprintKey,
   fingerprintParts,
@@ -180,7 +180,7 @@ function isPaymentDescription(desc: string): boolean {
   );
 }
 
-function makeFingerprint(m: Omit<BbvaMovement, "fingerprint">): string {
+export function makeFingerprint(m: Omit<BbvaMovement, "fingerprint">): string {
   const base = fingerprintParts([
     m.date,
     m.descriptionNormalized,
@@ -188,7 +188,7 @@ function makeFingerprint(m: Omit<BbvaMovement, "fingerprint">): string {
     amountFingerprintKey(m.amountArs, m.amountUsd),
     m.installment ?? "",
   ]);
-  return createHash("sha256").update(base).digest("hex").slice(0, 32);
+  return fingerprint32(base);
 }
 
 function normalizeHeaderCell(c: unknown): string {
@@ -770,8 +770,7 @@ export function parseTransparenciaConsumos(
 
     const categoryName = String(r["Categoría"] ?? r["Categoria"] ?? "Uncategorized").trim();
     const description = normalizeDescription(desc);
-    const fp = createHash("sha256")
-      .update(
+    const fp = fingerprint32(
         fingerprintParts([
           dateStr,
           description,
@@ -779,9 +778,7 @@ export function parseTransparenciaConsumos(
           amountUsd?.toFixed(2) ?? "",
           categoryName,
         ]),
-      )
-      .digest("hex")
-      .slice(0, 32);
+      );
 
     out.push({
       period,

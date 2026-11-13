@@ -16,21 +16,8 @@ import {
   isStatementFileName,
   statementFileRejectMessage,
 } from "@/lib/import/file-accept";
+import { importStatementFile } from "@/lib/import/client";
 import { cn } from "@/lib/utils";
-
-type ImportResult = {
-  error?: string;
-  total?: number;
-  inserted?: number;
-  alreadyExists?: number;
-  skipped?: number;
-  message?: string;
-  warning?: string | null;
-  fullyDuplicate?: boolean;
-  hint?: string | null;
-  bank?: string;
-  source?: string;
-};
 
 function bankHintFromFiles(files: File[]): string | null {
   for (const f of files) {
@@ -111,42 +98,14 @@ export function ImportForm({
               ? `${i + 1}/${files.length} · ${file.name}`
               : file.name,
           );
-          const fd = new FormData();
-          fd.set("file", file);
-          fd.set("kind", "bbva");
-          fd.set("bank", bankToSend);
-          const res = await fetch("/api/import/bbva", {
-            method: "POST",
-            body: fd,
-            credentials: "include",
-          });
-          const text = await res.text();
-          let data: ImportResult | null = null;
-          try {
-            data = text ? (JSON.parse(text) as ImportResult) : null;
-          } catch {
-            throw new Error(
-              res.status === 413
-                ? "El archivo es demasiado grande."
-                : text.slice(0, 160) || `Error ${res.status}`,
-            );
-          }
-          if (!res.ok) {
-            throw new Error(data?.error || `Error al importar ${file.name}`);
-          }
-          if ((data?.total ?? 0) === 0) {
-            const detail =
-              data?.message || `No se leyeron movimientos de “${file.name}”.`;
-            const hint = data?.hint ? ` ${data.hint}` : "";
-            throw new Error(`${detail}${hint}`);
-          }
-          total += data?.total ?? 0;
-          inserted += data?.inserted ?? 0;
-          alreadyExists += data?.alreadyExists ?? data?.skipped ?? 0;
-          if (data?.message) messages.push(`${file.name}: ${data.message}`);
-          if (data?.warning) warnings.push(`${file.name}: ${data.warning}`);
-          if (data?.hint) warnings.push(`${file.name}: ${data.hint}`);
-          lastBank = data?.bank ?? lastBank;
+          const data = await importStatementFile(file, bankToSend);
+          total += data.total;
+          inserted += data.inserted;
+          alreadyExists += data.alreadyExists;
+          if (data.message) messages.push(`${file.name}: ${data.message}`);
+          if (data.warning) warnings.push(`${file.name}: ${data.warning}`);
+          if (data.hint) warnings.push(`${file.name}: ${data.hint}`);
+          lastBank = data.bank ?? lastBank;
         }
 
         if (rejected.length > 0) {

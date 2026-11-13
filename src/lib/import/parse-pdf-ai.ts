@@ -1,4 +1,4 @@
-import { createHash } from "crypto";
+import { fingerprint32 } from "@/lib/hash";
 import OpenAI from "openai";
 import { z } from "zod";
 import type { BbvaMovement } from "@/lib/bbva/parse";
@@ -35,7 +35,7 @@ function makeFingerprint(m: Omit<BbvaMovement, "fingerprint">): string {
     amountFingerprintKey(m.amountArs, m.amountUsd),
     m.installment ?? "",
   ]);
-  return createHash("sha256").update(base).digest("hex").slice(0, 32);
+  return fingerprint32(base);
 }
 
 function normalizeIsoDate(raw: string): string | null {

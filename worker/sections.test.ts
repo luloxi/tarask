@@ -532,7 +532,7 @@ describe("section apis", { concurrency: false }, () => {
     const otherBody = (await other.json()) as { receipts: unknown[] };
     assert.equal(otherBody.receipts.length, 0);
     const posted = await handleReceipts(
-      new Request("https://tarask.test/api/receipts", { method: "POST" }),
+      new Request("https://tarask.test/api/receipts", { method: "DELETE" }),
       envFor(db),
       user,
     );

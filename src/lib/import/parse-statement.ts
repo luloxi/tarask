@@ -6,6 +6,11 @@ import {
   type CardStatementSaldo,
 } from "@/lib/stats/saldo-deuda";
 import {
+  looksLikeFiwindCtaCte,
+  parseFiwindCtaCteText,
+} from "@/lib/import/fiwind-ctacte";
+import type { PdfMarkdownSource } from "@/lib/bbva/parse-pdf";
+import {
   detectBankFromFileName,
   detectBankFromText,
   detectFileKind,
@@ -46,9 +51,17 @@ function workbookSource(
  * Single pipeline for PWA import, agent import, and MCP.
  * BBVA PDF first, then generic PDF, then AI; tables via the workbook parser.
  */
+export type ParseStatementOptions = {
+  /** Gets the PDF's markdown. The browser flow posts the file to the Worker. */
+  pdfMarkdown?: PdfMarkdownSource;
+  /** Skip the OpenAI fallback (browser: there is no key and no server round trip). */
+  skipAi?: boolean;
+};
+
 export async function parseStatementFile(
   buffer: Buffer,
   fileName: string,
+  options: ParseStatementOptions = {},
 ): Promise<StatementParseResult> {
   let fileKind = detectFileKind(buffer, fileName);
   const fromName = detectBankFromFileName(fileName);
@@ -68,7 +81,7 @@ export async function parseStatementFile(
       text = markdownToStatementText(buffer.toString("utf8"));
     } else {
       try {
-        text = await extractPdfText(buffer);
+        text = await extractPdfText(buffer, options.pdfMarkdown);
       } catch (e) {
         if (e instanceof PdfImportUnavailableError) {
           return {
@@ -86,6 +99,29 @@ export async function parseStatementFile(
     const detectedBank = detectBankFromText(text) ?? fromName;
     const pdfTextLength = text.length;
     const cardSaldo = parseCardStatementSaldoFromText(text);
+
+    if (looksLikeFiwindCtaCte(text)) {
+      const cta = parseFiwindCtaCteText(text);
+      const empty = cta.movements.length === 0;
+      const unreadable = cta.unreadable.length > 0;
+      return {
+        movements: cta.movements,
+        source: "pdf",
+        detectedBank: "Fiwind",
+        fileKind,
+        pdfTextLength,
+        hint: empty
+          ? cta.emptyPeriod && !unreadable
+            ? "Este estado de cuenta de Fiwind no tiene movimientos en el período: no hay nada para importar."
+            : unreadable
+              ? `No pudimos leer ${cta.unreadable.length} fila(s) del estado de cuenta de Fiwind. Subí el Excel de Actividad.`
+              : null
+          : unreadable
+            ? `Se importaron ${cta.movements.length} fila(s); ${cta.unreadable.length} no se pudieron leer y quedaron afuera.`
+            : null,
+        cardSaldo: null,
+      };
+    }
 
     const bbvaMovements = parseBbvaPdfText(text);
     if (bbvaMovements.length > 0) {
@@ -118,7 +154,7 @@ export async function parseStatementFile(
     const { isAiPdfImportConfigured, parseStatementPdfWithAi } = await import(
       "@/lib/import/parse-pdf-ai"
     );
-    if (isAiPdfImportConfigured()) {
+    if (!options.skipAi && isAiPdfImportConfigured()) {
       try {
         const aiMovements = await parseStatementPdfWithAi(
           buffer,

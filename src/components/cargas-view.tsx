@@ -11,6 +11,7 @@ import {
   Upload,
 } from "lucide-react";
 import { ImportForm } from "@/components/import-form";
+import { ReceiptUpload } from "@/components/receipt-upload";
 import { SectionNav } from "@/components/section-nav";
 import { EmptyState, PageHeader, PageStack, Surface } from "@/components/ui";
 import { formatDateAr, cn } from "@/lib/utils";
@@ -122,8 +123,17 @@ export function CargasView() {
         />
       </Surface>
 
+      <Surface elevated>
+        <ReceiptUpload
+          onDone={() => {
+            void load();
+            window.dispatchEvent(new Event("lc:card-imported"));
+          }}
+        />
+      </Surface>
+
       <p className="text-[15px] leading-relaxed text-[var(--muted-fg)]">
-        Fiwind: Actividad en Excel o CSV. BBVA: Últimos movimientos o el PDF del
+        Fiwind: Actividad en Excel o CSV, o el Estado de Cuenta en PDF. BBVA: Últimos movimientos o el PDF del
         resumen. Los duplicados no se vuelven a cargar.
       </p>
 

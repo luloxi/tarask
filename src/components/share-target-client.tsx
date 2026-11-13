@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
-import { compressImageForUpload } from "@/lib/image-compress";
+import { importStatementFile } from "@/lib/import/client";
+import { previewReceipt, saveReceipt } from "@/lib/receipts/client";
 import { formatArs, formatDateAr } from "@/lib/utils";
 
 const CACHE_NAME = "lc-share-target-v1";
@@ -91,62 +92,19 @@ export function ShareTargetClient() {
       if (isPdf) {
         setStatus("processing");
         try {
-          const fd = new FormData();
-          fd.set("file", file);
-          fd.set("kind", "bbva");
           const lower = file.name.toLowerCase();
-          fd.set(
-            "bank",
-            lower.includes("fiwind")
-              ? "Fiwind"
-              : lower.includes("bbva")
-                ? "BBVA"
-                : "BBVA",
+          const data = await importStatementFile(
+            file,
+            lower.includes("fiwind") ? "Fiwind" : "BBVA",
           );
-          const res = await fetch("/api/import/bbva", {
-            method: "POST",
-            body: fd,
-            credentials: "include",
-          });
-          const text = await res.text();
-          let data: {
-            error?: string;
-            total?: number;
-            inserted?: number;
-            alreadyExists?: number;
-            skipped?: number;
-            message?: string;
-            warning?: string | null;
-            hint?: string | null;
-            bank?: string;
-          } | null = null;
-          try {
-            data = text ? JSON.parse(text) : null;
-          } catch {
-            throw new Error(
-              res.status === 401
-                ? "Entrá a la app e intentá compartir de nuevo."
-                : text.slice(0, 160) || `Error ${res.status}`,
-            );
-          }
-          if (!res.ok) {
-            throw new Error(data?.error || `Error al importar ${file.name}`);
-          }
-          if ((data?.total ?? 0) === 0) {
-            throw new Error(
-              `${data?.message || "No se leyeron movimientos del PDF."}${
-                data?.hint ? ` ${data.hint}` : ""
-              }`,
-            );
-          }
           if (cancelled) return;
           setStatement({
-            total: data?.total ?? 0,
-            inserted: data?.inserted ?? 0,
-            alreadyExists: data?.alreadyExists ?? data?.skipped ?? 0,
-            message: data?.message ?? "",
-            warning: data?.warning ?? null,
-            bank: data?.bank ?? null,
+            total: data.total,
+            inserted: data.inserted,
+            alreadyExists: data.alreadyExists,
+            message: data.message,
+            warning: data.warning,
+            bank: data.bank,
           });
           setStatus("done");
           window.dispatchEvent(new Event("lc:card-imported"));
@@ -162,29 +120,15 @@ export function ShareTargetClient() {
       setPreview(URL.createObjectURL(file));
 
       try {
-        const compressed = await compressImageForUpload(file);
-        const fd = new FormData();
-        fd.set("file", compressed);
-
-        const res = await fetch("/api/receipts", {
-          method: "POST",
-          body: fd,
-          credentials: "include",
-        });
-
-        if (!res.ok) {
-          const text = await res.text();
-          let msg = `Error ${res.status}`;
-          try {
-            const data = JSON.parse(text) as { error?: string };
-            if (data.error) msg = data.error;
-          } catch {
-            if (text.length < 200) msg = text;
-          }
-          throw new Error(msg);
+        // Shared photos are saved without a review step, so only when the reading is complete.
+        const p = await previewReceipt(file);
+        if (!p.ocr.merchant || !p.ocr.date || p.ocr.total == null) {
+          throw new Error(
+            "No pudimos leer bien el ticket. Cargalo desde Resúmenes → Foto del ticket para revisarlo.",
+          );
         }
-
-        const data = (await res.json()) as UploadResult;
+        const saved = await saveReceipt(p.file, p.ocr);
+        const data = saved as unknown as UploadResult;
         if (cancelled) return;
         setResult(data);
         setStatus("done");

@@ -1,5 +1,5 @@
 import type { Env } from "./env";
-import { readSso, ssoClearCookie } from "./lulox-sso";
+import { readSso, ssoClearCookie, type SsoUser } from "./lulox-sso";
 import {
   OAUTH_COOKIE,
   base64url,
@@ -15,6 +15,8 @@ import {
 } from "./http";
 
 export const ADMIN_EMAIL = "lucianoolivabianco@gmail.com";
+/** Set when the user leaves on purpose: lulox_sso must not sign them back in until they choose to. */
+export const SSO_OFF_COOKIE = "tarask_sso_off";
 // Callback registered in Google Cloud on tarask. The old cuentix host still 301s its callback here for in-flight logins.
 const REDIRECT_URI = "https://tarask.lulox.com.ar/api/auth/callback/google";
 const SESSION_MS = 30 * 24 * 60 * 60 * 1000;
@@ -44,6 +46,7 @@ export async function requireUser(req: Request, env: Env): Promise<SessionUser |
   const token = readSessionCookie(req);
   if (!token) return (await ssoUser(req, env)) ?? json({ error: "No autenticado" }, 401);
   const tokenHash = await sha256Hex(token);
+  const sso = await activeSso(req, env);
   const row = await env.DB.prepare(
     `SELECT u.id AS id, u.email AS email, u.name AS name, u.image AS image
      FROM auth_session s
@@ -54,7 +57,19 @@ export async function requireUser(req: Request, env: Env): Promise<SessionUser |
     .bind(tokenHash, Date.now())
     .first<SessionUser>();
   if (!row?.id || !row.email) return (await ssoUser(req, env)) ?? json({ error: "No autenticado" }, 401);
+  if (sso && sso.email !== row.email.trim().toLowerCase()) {
+    // The Genkilulox login is another person than this Tarask session (same browser, account switched):
+    // never show the old account. Drop that session and follow the current Genki identity, if it is allowed here.
+    await env.DB.prepare("DELETE FROM auth_session WHERE token = ?").bind(tokenHash).run();
+    return (await ssoUser(req, env)) ?? json({ error: "No autenticado" }, 401, [clearSessionCookie(req)]);
+  }
   return row;
+}
+
+/** The verified Genkilulox identity for this request, unless the user signed out of Tarask on purpose. */
+async function activeSso(req: Request, env: Env): Promise<SsoUser | null> {
+  if (readCookie(req, SSO_OFF_COOKIE) === "1") return null;
+  return readSso(req, env.LULOX_SSO_SECRET);
 }
 
 /**
@@ -63,7 +78,7 @@ export async function requireUser(req: Request, env: Env): Promise<SessionUser |
  * and already has a Tarask user (first login stays the Google flow here).
  */
 async function ssoUser(req: Request, env: Env): Promise<SessionUser | null> {
-  const sso = await readSso(req, env.LULOX_SSO_SECRET);
+  const sso = await activeSso(req, env);
   if (!sso || !(await isEmailAllowed(env, sso.email))) return null;
   const row = await env.DB.prepare("SELECT id, email, name, image FROM auth_user WHERE email = ? LIMIT 1").bind(sso.email).first<SessionUser>();
   return row?.id ? row : null;
@@ -89,9 +104,10 @@ export async function handleGoogleStart(req: Request, env: Env): Promise<Respons
     code_challenge_method: "S256",
     prompt: "select_account",
   });
+  // Starting a sign-in is a deliberate choice: SSO may work again after it.
   return redirect(
     `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`,
-    [cookie],
+    [cookie, serializeCookie(SSO_OFF_COOKIE, "", req, 0)],
   );
 }
 
@@ -152,7 +168,12 @@ export async function handleGoogleCallback(req: Request, env: Env): Promise<Resp
     image: profile.picture ?? null,
   });
   const session = await createSession(env, user.id, req);
-  return redirect("/dashboard", [clear, session]);
+  const cookies = [clear, session, serializeCookie(SSO_OFF_COOKIE, "", req, 0)];
+  // Signed in with a different Google account than the one Genkilulox holds: the deliberate login wins,
+  // so drop the shared cookie instead of letting it overrule this session on the next request.
+  const sso = await readSso(req, env.LULOX_SSO_SECRET);
+  if (sso && sso.email !== email) cookies.push(ssoClearCookie());
+  return redirect("/dashboard", cookies);
 }
 
 export async function handleLogout(req: Request, env: Env): Promise<Response> {
@@ -162,7 +183,7 @@ export async function handleLogout(req: Request, env: Env): Promise<Response> {
     await env.DB.prepare("DELETE FROM auth_session WHERE token = ?").bind(tokenHash).run();
   }
   // Leaving Tarask also ends the shared login, or the SSO cookie would sign you right back in.
-  return json({ ok: true }, 200, [clearSessionCookie(req), ssoClearCookie()]);
+  return json({ ok: true }, 200, [clearSessionCookie(req), ssoClearCookie(), serializeCookie(SSO_OFF_COOKIE, "1", req, 24 * 60 * 60)]);
 }
 
 async function isEmailAllowed(env: Env, email: string): Promise<boolean> {

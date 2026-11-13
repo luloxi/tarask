@@ -35,6 +35,8 @@
   "vars": {
     "NEXT_PUBLIC_APP_URL": "https://tarask.lulox.com.ar",
     "AUTH_URL": "https://tarask.lulox.com.ar",
+    // Besides lucianoolivabianco@gmail.com (always allowed): each of these signs in with Google and gets their own empty Tarask.
+    "ALLOWED_EMAILS": "lulox.eth@gmail.com,kathonejo@gmail.com",
     "SERPIX_SYNC_URL": "https://erp.lulox.com.ar/api/integrations/cuentix/events"
   },
   "observability": { "enabled": true }

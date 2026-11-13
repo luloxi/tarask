@@ -275,20 +275,18 @@ export function appendSettledZero(
   const prior = [...points].filter((point) => point.date < clearedOn).at(-1);
   const assetsArs = prior?.assetsArs ?? 0;
   const assetsUsd = prior?.assetsUsd ?? 0;
-  return [
-    ...points,
-    {
-      date: clearedOn,
-      assetsArs,
-      assetsUsd,
-      debtArs: 0,
-      debtUsd: 0,
-      netWorthArs: assetsArs,
-      fxRate: prior?.fxRate ?? null,
-      source: "derived",
-      debtKind: "closing_balance",
-    },
-  ].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  const settled: PatrimonioPoint = {
+    date: clearedOn,
+    assetsArs,
+    assetsUsd,
+    debtArs: 0,
+    debtUsd: 0,
+    netWorthArs: assetsArs,
+    fxRate: prior?.fxRate ?? null,
+    source: "derived",
+    debtKind: "closing_balance",
+  };
+  return [...points, settled].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 }
 
 export type NetWorthChange = {

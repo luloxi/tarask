@@ -1,19 +1,21 @@
 /** Public catalogue of MCP tools (UI + docs). No secrets. */
 export const MCP_TOOLS = [
   {
+    name: "resumen_mensual",
+    summary:
+      "Resumen mensual de ingresos y gastos (from/to en YYYY-MM; por defecto los últimos 6 meses).",
+  },
+  {
+    name: "deuda_ahorro_patrimonio",
+    summary: "Deuda, ahorros y patrimonio del hogar, con el cambio en el tiempo.",
+  },
+  {
+    name: "ultimos_movimientos",
+    summary: "Últimos movimientos (limit, period YYYY-MM y query opcionales).",
+  },
+  {
     name: "gastos_del_mes",
-    summary:
-      "Totales reales del mes (period opcional: YYYY-MM, latest o mes actual AR).",
-  },
-  {
-    name: "resumen",
-    summary:
-      "Resúmenes importados, períodos disponibles y totales del mes actual / último con datos.",
-  },
-  {
-    name: "importar_resumen",
-    summary:
-      "Importa Excel/CSV/PDF (fileBase64 + fileName; bank opcional, ej. Fiwind).",
+    summary: "Totales reales del mes (period: YYYY-MM, latest, o el mes actual AR).",
   },
   {
     name: "listar_cargas",

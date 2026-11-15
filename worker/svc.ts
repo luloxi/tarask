@@ -65,7 +65,7 @@ function bearerToken(req: Request): string {
  * SHA-256 both sides, then a full-length XOR compare.
  * An unset secret, a missing bearer, and a wrong bearer all fail the same way.
  */
-async function serviceTokenMatches(presented: string, secret: string | undefined): Promise<boolean> {
+export async function serviceTokenMatches(presented: string, secret: string | undefined): Promise<boolean> {
   const material = presented.length > MAX_TOKEN_CHARS ? `too-long:${presented.length}` : presented;
   const [left, right] = await Promise.all([
     sha256Bytes(material),

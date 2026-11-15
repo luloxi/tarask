@@ -30,9 +30,10 @@ describe("mcp helpers", () => {
     assert.equal(MCP_PUBLIC_URL, "https://tarask.lulox.com.ar/api/mcp");
     const names = MCP_TOOLS.map((t) => t.name);
     assert.deepEqual(names, [
+      "resumen_mensual",
+      "deuda_ahorro_patrimonio",
+      "ultimos_movimientos",
       "gastos_del_mes",
-      "resumen",
-      "importar_resumen",
       "listar_cargas",
     ]);
   });

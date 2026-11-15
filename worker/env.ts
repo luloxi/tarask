@@ -58,6 +58,8 @@ export interface Env {
    * Never put the value in wrangler.jsonc, git, or logs.
    */
   MCP_SERVICE_TOKEN?: string;
+  /** Optional legacy/admin bearer alias for /api/mcp. wrangler secret. */
+  AGENT_API_TOKEN?: string;
   /**
    * `auth_user.email` the service acts as. When unset, the admin email is used.
    * Not a secret. Never changes who a cookie session is.

@@ -35,6 +35,7 @@ import { handleSvc } from "./svc";
 import { handleTransactions } from "./transactions";
 import { handleFiwindReclassify } from "./reclassify";
 import { redirectLegacyHost } from "./legacy-host";
+import { handleTaraskMcp } from "./mcp-server";
 
 const worker = {
   async fetch(req: Request, env: Env, ctx?: WorkerContext): Promise<Response> {
@@ -43,6 +44,8 @@ const worker = {
     const url = new URL(req.url);
     const path = url.pathname.length > 1 ? url.pathname.replace(/\/+$/, "") : url.pathname;
     try {
+      const mcp = await handleTaraskMcp(req, env);
+      if (mcp) return mcp;
       if (path === "/api/auth/google" && req.method === "GET") {
         return await handleGoogleStart(req, env);
       }

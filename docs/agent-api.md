@@ -54,12 +54,17 @@ If tools return `code: "no_household"`, mint from `/mcp` while logged into that 
 
 ### Tools
 
+El endpoint vive en el Worker (`/api/mcp`, también se acepta POST `/mcp`). La página `/mcp` es solo la UI para generar el token.
+
 | Tool | Qué hace |
 | --- | --- |
+| `resumen_mensual` | Resumen mensual de ingresos y gastos (`from`/`to` en `YYYY-MM`). |
+| `deuda_ahorro_patrimonio` | Deuda, ahorros y patrimonio. |
+| `ultimos_movimientos` | Últimos movimientos (`limit`, `period`, `query`). |
 | `gastos_del_mes` | Totales reales; `period` opcional (`YYYY-MM`, `latest`, o mes actual AR). |
-| `resumen` | Resúmenes importados + períodos + mes actual / último con datos. |
-| `importar_resumen` | Importa Excel/PDF: `fileBase64` + `fileName` (+ `bank`, `kind`). |
 | `listar_cargas` | Historial de cargas (resúmenes, tickets, manuales). |
+
+Importar un resumen se hace en la PWA (`/cargas`): el Worker ya no parsea el archivo (eso corre en el dispositivo).
 
 Todas las tools filtran por el `household_id` del token.
 

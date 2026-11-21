@@ -33,7 +33,7 @@ export async function countHogarReintegroByMerchant(opts: {
 
 /**
  * Mark matching txs as isPayment (reintegro / non-spend).
- * Does not touch ownership, categories, IOG links, or Deuda fields.
+ * Does not touch ownership, categories, or Deuda fields.
  */
 export async function applyHogarReintegroToSimilar(opts: {
   householdId: string;

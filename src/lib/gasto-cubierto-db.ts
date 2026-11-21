@@ -49,7 +49,7 @@ export async function countGastoCubiertoByMerchant(opts: {
 
 /**
  * Mark matching utility bills as isPayment (cubierto / out of neta).
- * Does not touch ownership, categories, IOG links, or Deuda fields.
+ * Does not touch ownership, categories, or Deuda fields.
  */
 export async function applyGastoCubiertoToSimilar(opts: {
   householdId: string;

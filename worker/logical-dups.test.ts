@@ -37,7 +37,7 @@ describe("pairLogicalDuplicates", () => {
     assert.deepEqual(drop, ["fiwind"]);
   });
 
-  it("drops a Personal numeric against Invoice IOG Uber the same day", () => {
+  it("drops a Personal numeric against a named Uber in another household the same day", () => {
     const drop = dropped([
       row({
         id: "num",
@@ -53,7 +53,7 @@ describe("pairLogicalDuplicates", () => {
         householdId: "casita",
         date: "2026-08-31",
         bank: "BBVA",
-        source: "invoice_iog",
+        source: "bbva_xlsx",
         description: "Uber",
         amountArs: "5971",
       }),

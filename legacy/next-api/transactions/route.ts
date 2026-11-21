@@ -152,8 +152,6 @@ export async function GET(req: Request) {
           | "shared",
         paidByUserId: r.paidByUserId,
         source: r.source,
-        linkedTransactionId: r.linkedTransactionId ?? null,
-        linkedToInvoiceIog: Boolean(r.linkedTransactionId) && r.source !== "invoice_iog",
         bank: r.bank ?? null,
         category: r.categoryId ? (byId.get(r.categoryId) ?? null) : null,
         hasTicket: Boolean(receipt) || r.source === "receipt",

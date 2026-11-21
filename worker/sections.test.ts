@@ -633,6 +633,7 @@ describe("section apis", { concurrency: false }, () => {
       "/api/stats/compartido",
       "/api/billing/subscription",
       "/api/stats/mes-a-mes",
+      "/api/stats/mes-a-mes/movimientos",
       "/api/grupo",
       "/api/receipts",
       "/api/admin/allowed-emails",

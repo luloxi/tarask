@@ -5,6 +5,7 @@
  * Category edits stay on `/api/transactions`.
  */
 
+import { displayCategoryName } from "../src/lib/category-label";
 import { HOGAR_UTILITY_SLUGS } from "../src/lib/gasto-cubierto";
 import type { SessionUser } from "./auth";
 import { listVisibleCategories } from "./categories";
@@ -12,6 +13,8 @@ import type { Env } from "./env";
 import { loadFx, monthEndBuy } from "./fx";
 import { activeHousehold, forceSharedOnly, type HouseholdRow } from "./household";
 import { json, num, periodRange } from "./http";
+import { reintegroFlags } from "./reintegro-flags";
+import { OUTBOX_LATEST_JOIN, syncStatusFromOutbox } from "./serpix-sync";
 import { ARS_EXPR, USD_EXPR, expenseSql } from "./sql";
 import { loadExcludedMovementIds } from "./transfer-class";
 
@@ -230,11 +233,108 @@ export async function handleMesAMes(
     categories: categories.map((cat) => ({
       id: cat.id,
       slug: cat.slug,
-      name: cat.name,
+      name: displayCategoryName(cat.name, cat.slug),
     })),
     sharedBalance,
     coupleBalance: sharedBalance,
   });
+}
+
+type MovementRow = {
+  id: string;
+  date: string;
+  description_normalized: string;
+  amount_ars: string | number | null;
+  amount_usd: string | number | null;
+  is_payment: number | null;
+  ownership: string;
+  paid_by_user_id: string | null;
+  category_id: string | null;
+  category_slug: string | null;
+  category_name: string | null;
+  is_business: number | null;
+  sync_type: string | null;
+  sync_sent_at: number | null;
+  sync_failed_at: number | null;
+};
+
+/**
+ * GET `/api/stats/mes-a-mes/movimientos` — every expense behind the Por mes
+ * category totals, with the same period / ownership / expense filters.
+ * No page cap: the expanded list must match count and sum of the aggregate.
+ */
+export async function handleMesAMesMovimientos(
+  req: Request,
+  env: Env,
+  user: SessionUser,
+): Promise<Response> {
+  if (req.method !== "GET") return json({ error: "Método no permitido" }, 405);
+  const url = new URL(req.url);
+  const periodRaw = url.searchParams.get("period");
+  const range =
+    periodRaw && periodRaw !== "all" ? periodRange(periodRaw) : null;
+  if (periodRaw && periodRaw !== "all" && !range) {
+    return json({ error: "Período inválido" }, 400);
+  }
+  const ownershipRaw = url.searchParams.get("ownership");
+  const ownership: Ownership =
+    ownershipRaw === "personal" || ownershipRaw === "shared" ? ownershipRaw : "all";
+
+  const { active } = await activeHousehold(req, env, user.id);
+  if (!active) return json({ error: "NO_HOUSEHOLD" }, 400);
+
+  const { sql: where, binds } = spendWhere(active, user.id, ownership);
+  const movements = await loadExcludedMovementIds(env.DB, user.id, env.OWN_ACCOUNT_IDS);
+  const expense = expenseSql(movements.excludedIds);
+  const periodSql = range ? "AND t.date >= ? AND t.date < ?" : "";
+  const periodBinds = range ? [range.start, range.end] : [];
+
+  const page = await env.DB.prepare(
+    `SELECT t.id, t.date, t.description_normalized, t.amount_ars, t.amount_usd,
+            t.is_payment, t.ownership, t.paid_by_user_id, t.category_id,
+            c.slug AS category_slug, c.name AS category_name,
+            t.is_business, sx.type AS sync_type, sx.sent_at AS sync_sent_at,
+            sx.failed_at AS sync_failed_at
+     FROM transactions t
+     LEFT JOIN categories c ON c.id = t.category_id
+     ${OUTBOX_LATEST_JOIN}
+     WHERE t.household_id = ?
+       AND ${expense}
+       AND ${where}
+       ${periodSql}
+     ORDER BY t.date DESC, t.id DESC`,
+  )
+    .bind(active.id, ...binds, ...periodBinds)
+    .all<MovementRow>();
+
+  const transactions = (page.results ?? []).map((row) => {
+    const slug = row.category_slug || "uncategorized";
+    const category = {
+      id: row.category_id ?? "",
+      slug,
+      name: displayCategoryName(row.category_name, slug),
+    };
+    return {
+      id: row.id,
+      date: row.date,
+      descriptionNormalized: row.description_normalized,
+      amountArs: row.amount_ars != null ? num(row.amount_ars) : null,
+      amountUsd: row.amount_usd != null ? num(row.amount_usd) : null,
+      isPayment: Boolean(row.is_payment),
+      ownership: row.ownership === "shared" ? ("shared" as const) : ("personal" as const),
+      paidByUserId: row.paid_by_user_id,
+      category,
+      canEdit: row.ownership === "shared" || row.paid_by_user_id === user.id,
+      isBusiness: Boolean(row.is_business),
+      syncStatus: syncStatusFromOutbox({
+        ...row,
+        is_business: row.is_business ?? 0,
+      }),
+      ...reintegroFlags(row.description_normalized, env.REINTEGRO_PAYEES),
+    };
+  });
+
+  return json({ transactions, total: transactions.length });
 }
 
 /** Personal chip keeps the viewer's own rows. Other chips on a shared hogar are shared-only. */
@@ -270,14 +370,17 @@ function buildMonth(
 ): Month {
   const buy = monthEndBuy(fx, period);
   const rate = buy > 0 ? buy : 0;
-  const categories = rows
-    .map((row) => {
-      const amountArs = num(row.ars);
-      const amountUsd = num(row.usd);
-      const amountArsFromUsd = rate > 0 ? amountUsd * rate : 0;
-      return {
-        slug: row.slug || "uncategorized",
-        name: row.name || "Sin categoría",
+  const merged = new Map<string, Cat>();
+  for (const row of rows) {
+    const amountArs = num(row.ars);
+    const amountUsd = num(row.usd);
+    const amountArsFromUsd = rate > 0 ? amountUsd * rate : 0;
+    const slug = row.slug || "uncategorized";
+    const cur = merged.get(slug);
+    if (!cur) {
+      merged.set(slug, {
+        slug,
+        name: displayCategoryName(row.name, slug),
         categoryId: row.id,
         amountArs,
         amountUsd,
@@ -285,9 +388,19 @@ function buildMonth(
         amountArsCombined: amountArs + amountArsFromUsd,
         count: num(row.n),
         pct: 0,
-      };
-    })
-    .sort((a, b) => b.amountArsCombined - a.amountArsCombined);
+      });
+      continue;
+    }
+    cur.amountArs += amountArs;
+    cur.amountUsd += amountUsd;
+    cur.amountArsFromUsd += amountArsFromUsd;
+    cur.amountArsCombined += amountArs + amountArsFromUsd;
+    cur.count += num(row.n);
+    if (!cur.categoryId && row.id) cur.categoryId = row.id;
+  }
+  const categories = [...merged.values()].sort(
+    (a, b) => b.amountArsCombined - a.amountArsCombined,
+  );
 
   const totalArs = categories.reduce((sum, cat) => sum + cat.amountArs, 0);
   const totalUsd = categories.reduce((sum, cat) => sum + cat.amountUsd, 0);

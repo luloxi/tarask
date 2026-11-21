@@ -33,13 +33,14 @@ import {
   type GastoCubiertoPrompt,
 } from "@/components/gasto-cubierto-toast";
 import {
-  isConsumosHiddenPayment,
   isReintegroHogarTipo,
 } from "@/lib/reintegro-hogar";
 import { isGastoCubiertoTipo } from "@/lib/gasto-cubierto";
 import { isTransferenciaInternaTipo } from "@/lib/bbva/bank-entries";
 import { isAbortError } from "@/hooks/use-json-resource";
 import { pickFilterPeriod } from "@/lib/list-page";
+import { displayCategoryName } from "@/lib/category-label";
+import { groupTxsByCategorySlug } from "@/lib/category-expand";
 
 type CategoryOpt = { id: string; slug: string; name: string };
 
@@ -245,6 +246,7 @@ export function MesAMesView({
   const [reintegroBusy, setReintegroBusy] = useState(false);
   const [cubiertoPrompt, setCubiertoPrompt] = useState<GastoCubiertoPrompt | null>(null);
   const [cubiertoBusy, setCubiertoBusy] = useState(false);
+  const [undo, setUndo] = useState<{ id: string; body: Record<string, unknown> } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -325,7 +327,7 @@ export function MesAMesView({
     setError(null);
   }
 
-  const txKey = `${mode}\0${periodReady ? filterPeriod : ""}`;
+  const txKey = `${mode}\0${periodReady ? filterPeriod : ""}\0${ownershipF}`;
   const [seenTxKey, setSeenTxKey] = useState(txKey);
   if (txKey !== seenTxKey) {
     setSeenTxKey(txKey);
@@ -398,11 +400,11 @@ export function MesAMesView({
   useEffect(() => {
     if (mode !== "resumen" || !periodReady) return;
     const ac = new AbortController();
-    const q =
-      filterPeriod && filterPeriod !== "all"
-        ? `?period=${encodeURIComponent(filterPeriod)}`
-        : "";
-    fetch(`/api/transactions${q}`, {
+    const params = new URLSearchParams();
+    if (filterPeriod && filterPeriod !== "all") params.set("period", filterPeriod);
+    if (ownershipF !== "all") params.set("ownership", ownershipF);
+    const q = params.toString();
+    fetch(`/api/stats/mes-a-mes/movimientos${q ? `?${q}` : ""}`, {
       credentials: "include",
       signal: ac.signal,
     })
@@ -414,24 +416,13 @@ export function MesAMesView({
         if (ac.signal.aborted) return;
         if (ok) {
           setTxs(
-            ((data.transactions ?? []) as Tx[])
-              .filter(
-                (t) =>
-                  !isConsumosHiddenPayment(
-                    Boolean(t.isPayment),
-                    t.descriptionNormalized,
-                    t.category?.slug,
-                    Boolean(t.reintegroHogar),
-                  ) &&
-                  (t.amountArs != null || t.amountUsd != null),
-              )
-              .map((t) => ({
-                ...t,
-                ownership:
-                  t.ownership === "shared" ? ("shared" as const) : ("personal" as const),
-                reintegroHogar: Boolean(t.reintegroHogar),
-                reintegroPayee: Boolean(t.reintegroPayee),
-              })),
+            ((data.transactions ?? []) as Tx[]).map((t) => ({
+              ...t,
+              ownership:
+                t.ownership === "shared" ? ("shared" as const) : ("personal" as const),
+              reintegroHogar: Boolean(t.reintegroHogar),
+              reintegroPayee: Boolean(t.reintegroPayee),
+            })),
           );
           if (data.categories?.length) setCategories(data.categories);
         }
@@ -442,7 +433,7 @@ export function MesAMesView({
         setTxsLoading(false);
       });
     return () => ac.abort();
-  }, [mode, filterPeriod, periodReady]);
+  }, [mode, filterPeriod, periodReady, ownershipF]);
 
   const grand = useMemo(() => aggregateMonths(months), [months]);
 
@@ -456,18 +447,7 @@ export function MesAMesView({
     return txs.filter((t) => t.ownership === ownershipF);
   }, [txs, ownershipF]);
 
-  const txsByCat = useMemo(() => {
-    const map = new Map<string, Tx[]>();
-    for (const t of filteredTxs) {
-      const slug = t.category?.slug ?? "uncategorized";
-      if (!map.has(slug)) map.set(slug, []);
-      map.get(slug)!.push(t);
-    }
-    for (const list of map.values()) {
-      list.sort((a, b) => b.date.localeCompare(a.date));
-    }
-    return map;
-  }, [filteredTxs]);
+  const txsByCat = useMemo(() => groupTxsByCategorySlug(filteredTxs), [filteredTxs]);
 
   const periodIndex = periods.indexOf(filterPeriod);
   const canPrev = periodIndex >= 0 && periodIndex < periods.length - 1;
@@ -492,32 +472,21 @@ export function MesAMesView({
   }
 
   async function reloadTxs() {
-    const q =
-      filterPeriod && filterPeriod !== "all"
-        ? `?period=${encodeURIComponent(filterPeriod)}`
-        : "";
-    const res2 = await fetch(`/api/transactions${q}`, {
+    const params = new URLSearchParams();
+    if (filterPeriod && filterPeriod !== "all") params.set("period", filterPeriod);
+    if (ownershipF !== "all") params.set("ownership", ownershipF);
+    const q = params.toString();
+    const res2 = await fetch(`/api/stats/mes-a-mes/movimientos${q ? `?${q}` : ""}`, {
       credentials: "include",
     });
     if (res2.ok) {
       const d2 = await res2.json();
       setTxs(
-        (d2.transactions as Tx[])
-          .filter(
-            (t) =>
-              !isConsumosHiddenPayment(
-                Boolean(t.isPayment),
-                t.descriptionNormalized,
-                t.category?.slug,
-                Boolean(t.reintegroHogar),
-              ) &&
-              (t.amountArs != null || t.amountUsd != null),
-          )
-          .map((t) => ({
-            ...t,
-            reintegroHogar: Boolean(t.reintegroHogar),
-            reintegroPayee: Boolean(t.reintegroPayee),
-          })),
+        (d2.transactions as Tx[]).map((t) => ({
+          ...t,
+          reintegroHogar: Boolean(t.reintegroHogar),
+          reintegroPayee: Boolean(t.reintegroPayee),
+        })),
       );
     }
   }
@@ -614,21 +583,20 @@ export function MesAMesView({
     setSavingId(id);
     const prev = txs;
     try {
-      if (body.ownership === "personal" || body.ownership === "shared") {
-        setTxs((list) =>
-          list.map((t) =>
-            t.id === id
-              ? {
-                  ...t,
-                  ownership:
-                    body.ownership === "shared"
-                      ? ("shared" as const)
-                      : ("personal" as const),
-                }
-              : t,
-          ),
-        );
-      }
+      setTxs((list) =>
+        list.map((t) => {
+          if (t.id !== id) return t;
+          const next = { ...t };
+          if (body.ownership === "personal" || body.ownership === "shared") {
+            next.ownership = body.ownership === "shared" ? "shared" : "personal";
+          }
+          if (typeof body.description === "string") next.descriptionNormalized = body.description;
+          if (typeof body.date === "string") next.date = body.date;
+          if ("amountArs" in body) next.amountArs = body.amountArs as number | null;
+          if ("amountUsd" in body) next.amountUsd = body.amountUsd as number | null;
+          return next;
+        }),
+      );
       const res = await fetch("/api/transactions", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -728,7 +696,26 @@ export function MesAMesView({
         return data;
       }
 
-      if (body.ownership) setToast("Guardado.");
+      if (
+        "description" in body ||
+        "date" in body ||
+        "amountArs" in body ||
+        "amountUsd" in body
+      ) {
+        const before = prev.find((row) => row.id === id);
+        if (before) {
+          const revert: Record<string, unknown> = {};
+          if ("description" in body) revert.description = before.descriptionNormalized;
+          if ("date" in body) revert.date = before.date;
+          if ("amountArs" in body) revert.amountArs = before.amountArs;
+          if ("amountUsd" in body) revert.amountUsd = before.amountUsd;
+          setUndo(Object.keys(revert).length ? { id, body: revert } : null);
+        }
+        setToast("Guardado.");
+      } else if (body.ownership) {
+        setUndo(null);
+        setToast("Guardado.");
+      }
       void loadStats();
       await reloadTxs();
       return data;
@@ -1058,7 +1045,24 @@ export function MesAMesView({
           }}
         />
       ) : (
-        toast && <Toast>{toast}</Toast>
+        toast && (
+          <Toast>
+            {toast}
+            {undo ? (
+              <button
+                type="button"
+                className="ml-2 underline decoration-2 underline-offset-2"
+                onClick={() => {
+                  const u = undo;
+                  setUndo(null);
+                  void patchTx(u.id, u.body).then(() => setToast("Deshecho."));
+                }}
+              >
+                Deshacer
+              </button>
+            ) : null}
+          </Toast>
+        )
       )}
       {error && months.length > 0 && (
         <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40">
@@ -1083,6 +1087,7 @@ export function MesAMesView({
           onChangeCategory={changeCategory}
           onAssignChange={onAssignChange}
           onToggleBusiness={onToggleBusiness}
+          onPatch={patchTx}
         />
       ) : selectedMonth ? (
         <MonthDetail
@@ -1098,6 +1103,7 @@ export function MesAMesView({
           onChangeCategory={changeCategory}
           onAssignChange={onAssignChange}
           onToggleBusiness={onToggleBusiness}
+          onPatch={patchTx}
         />
       ) : (
         <p className="text-sm text-zinc-500">
@@ -1244,6 +1250,7 @@ function MonthDetail({
   onChangeCategory,
   onAssignChange,
   onToggleBusiness,
+  onPatch,
 }: {
   month: MonthBlock;
   isGrand?: boolean;
@@ -1258,6 +1265,7 @@ function MonthDetail({
   onChangeCategory: (txId: string, categoryId: string) => void;
   onAssignChange: (tx: Tx, value: string) => void;
   onToggleBusiness: (tx: Tx) => void;
+  onPatch: (id: string, body: Record<string, unknown>) => void;
 }) {
   const combined = monthTotalArs(month);
   const rateLabel = formatUsdRateLabel(month.usdRate);
@@ -1308,7 +1316,7 @@ function MonthDetail({
                     className="h-2.5 w-2.5 shrink-0 rounded-full"
                     style={{ backgroundColor: colorForCategory(c.slug) }}
                   />
-                  <span className="min-w-0 truncate font-medium">{c.name}</span>
+                  <span className="min-w-0 truncate font-medium">{displayCategoryName(c.name, c.slug)}</span>
                   <span className="shrink-0 text-xs text-[var(--muted-fg)]">{c.count}×</span>
                 </span>
                 <span className="ml-auto text-right">
@@ -1354,6 +1362,7 @@ function MonthDetail({
                           onChangeCategory={onChangeCategory}
                           onAssignChange={onAssignChange}
                           onToggleBusiness={onToggleBusiness}
+                          onPatch={onPatch}
                         />
                       ))}
                     </ul>

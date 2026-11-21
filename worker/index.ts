@@ -15,7 +15,7 @@ import { handleBalancesGet, handleBalancesManual, handleBalancesRoutine } from "
 import { handleDashboard } from "./dashboard";
 import { handleIncomeByMonth, handleSpendingByCategory, handleSpendingSeries } from "./insights";
 import { handleGrupo } from "./grupo";
-import { handleMesAMes } from "./mes-a-mes";
+import { handleMesAMes, handleMesAMesMovimientos } from "./mes-a-mes";
 import { handleReceiptFile, handleReceipts } from "./receipts";
 import { handleImportStatement, handlePdfText } from "./import";
 import type { Env, WorkerContext } from "./env";
@@ -102,6 +102,7 @@ const worker = {
       if (path === "/api/billing/subscription" && req.method === "GET") {
         return await handleBillingSubscription(req, env, user);
       }
+      if (path === "/api/stats/mes-a-mes/movimientos") return await handleMesAMesMovimientos(req, env, user);
       if (path === "/api/stats/mes-a-mes") return await handleMesAMes(req, env, user);
       if (path === "/api/grupo") return await handleGrupo(req, env, user);
       if (path === "/api/receipts") return await handleReceipts(req, env, user);

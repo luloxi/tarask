@@ -265,7 +265,7 @@ export function TransactionsTable() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
   const [iogTotal, setIogTotal] = useState(0);
   const [exportOpen, setExportOpen] = useState(false);

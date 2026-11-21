@@ -7,7 +7,7 @@
  * the household into JS:
  * - not a payment, not a credit
  * - not a period-xls / resumen-pdf source (bbva_period, bbva_pdf)
- * - Casita rows linked to Invoice IOG are excluded; invoice_iog itself counts
+ * - `linked_transaction_id` is ignored: every matching row counts
  * - `BANK_ACCOUNTING_SQL` keeps the phrase list (cuenta tuya, cambio de
  *   moneda, pesificación, transf deuda, compra/venta KO, COMPRA/VENTA ME,
  *   RETIRO, DEPOSITO, CONVERSION, yields).
@@ -239,7 +239,6 @@ export function expenseSql(dupIds?: Iterable<string>): string {
   t.is_payment = 0
   AND t.is_credit = 0
   AND IFNULL(t.source, '') NOT IN ('bbva_period', 'bbva_pdf')
-  AND (t.linked_transaction_id IS NULL OR t.source = 'invoice_iog')
   AND NOT ${bankAccountingSql(dupIds)}
 `;
 }

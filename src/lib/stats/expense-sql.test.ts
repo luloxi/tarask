@@ -83,7 +83,7 @@ const ROWS: Array<{
   { id: "s7", description: "Retiro a Ana", expense: true },
   { id: "s8", description: "SU PAGO EN PESOS", isPayment: 1, expense: false },
   { id: "s9", description: "Resumen", source: "bbva_pdf", expense: false },
-  { id: "s10", description: "Luz hogar", linked: "other", source: "csv_import", expense: false },
+  { id: "s10", description: "Luz hogar", linked: "other", source: "csv_import", expense: true },
   { id: "s11", description: "Uber", linked: "x", source: "invoice_iog", expense: true },
   {
     id: "k60",
@@ -104,7 +104,6 @@ function expected(row: (typeof ROWS)[number]): boolean {
     isCredit: Boolean(row.isCredit),
     descriptionNormalized: row.description,
     source: row.source ?? "bbva_import",
-    linkedTransactionId: row.linked ?? null,
   });
 }
 
@@ -545,6 +544,10 @@ describe("Ockham Fiwind numeric echoes", () => {
       { id: "named", description: "Cafe", date: "2026-08-18", amountArs: "999", amountUsd: "250" },
     ]);
     assert.equal(arsVsUsd.has("num"), true);
+  });
+
+  it("does not exclude rows by linked_transaction_id", () => {
+    assert.doesNotMatch(EXPENSE_SQL, /linked_transaction_id/);
   });
 
   it("rejects ids that are not safe to inline and leaves an empty set unchanged", () => {

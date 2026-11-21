@@ -134,22 +134,20 @@ describe("isExpenseRow", () => {
     );
   });
 
-  it("skips Casita rows linked to Invoice IOG but keeps IOG source of truth", () => {
+  it("counts every spend in neta regardless of linked_transaction_id", () => {
     assert.equal(
       isExpenseRow({
         isPayment: false,
         descriptionNormalized: "CURSOR",
         source: "bbva_import",
-        linkedTransactionId: "iog-1",
       }),
-      false,
+      true,
     );
     assert.equal(
       isExpenseRow({
         isPayment: false,
         descriptionNormalized: "Cursor Pro",
         source: "invoice_iog",
-        linkedTransactionId: "casita-1",
       }),
       true,
     );

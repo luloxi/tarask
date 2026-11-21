@@ -211,8 +211,7 @@ export const transactions = sqliteTable(
     /** Last 4 of the BBVA card when the period xls lists titular + adicionales. */
     cardLast4: text("card_last4"),
     /**
-     * Cross-hogar link (Casita BBVA/Fiwind ↔ Invoice IOG) by same amount.
-     * Casita side excluded from neta; Invoice IOG stays source of truth for work.
+     * Historic cross-hogar id. Unused by totals and listing; column kept as-is.
      */
     linkedTransactionId: text("linked_transaction_id"),
     /** 1 when this personal movement is synced to Serpix as a business expense. */

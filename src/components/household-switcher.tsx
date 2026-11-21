@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useJsonResource } from "@/hooks/use-json-resource";
 import { useRouter } from "next/navigation";
-import { Home, Receipt, Trash2 } from "lucide-react";
+import { Home, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type HouseholdOption = {
@@ -18,11 +18,6 @@ type Props = {
   variant?: "page" | "header";
   className?: string;
 };
-
-function iconFor(name: string) {
-  if (/invoice\s*iog/i.test(name)) return Receipt;
-  return Home;
-}
 
 export function HouseholdSwitcher({ variant = "page", className }: Props) {
   const router = useRouter();
@@ -173,7 +168,6 @@ export function HouseholdSwitcher({ variant = "page", className }: Props) {
         aria-label="Cambiar de hogar"
       >
         {households.map((h) => {
-          const Icon = iconFor(h.name);
           const selected = h.id === (activeId ?? active?.id);
           return (
             <span key={h.id} className="inline-flex items-center">
@@ -189,7 +183,7 @@ export function HouseholdSwitcher({ variant = "page", className }: Props) {
                   busy && "opacity-70",
                 )}
               >
-                <Icon className="h-3.5 w-3.5" strokeWidth={selected ? 2.25 : 1.75} />
+                <Home className="h-3.5 w-3.5" strokeWidth={selected ? 2.25 : 1.75} />
                 {h.name}
               </button>
               {h.canDelete && (

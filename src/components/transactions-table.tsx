@@ -50,8 +50,6 @@ type Tx = {
   /** Generic transfer with no own account and no twin. Not stored. */
   revisar?: boolean;
   paidByUserId: string | null; source: string;
-  linkedTransactionId?: string | null;
-  linkedToInvoiceIog?: boolean;
   category: Category | null; hasTicket: boolean; receipt: ReceiptInfo | null;
   isBusiness?: boolean;
   syncStatus?: SyncStatus | null;
@@ -102,22 +100,6 @@ function RevisarBadge({ size = "md" }: { size?: "sm" | "md" }) {
   );
 }
 
-/** Amber IOG pill — keep shrink-0 so truncate never eats it. */
-function IogBadge({ size = "md" }: { size?: "sm" | "md" }) {
-  return (
-    <span
-      className={
-        size === "sm"
-          ? "shrink-0 rounded-full bg-[var(--warn)] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--on-accent)]"
-          : "shrink-0 rounded-full bg-[var(--warn)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--on-accent)]"
-      }
-      title="Vinculado a Invoice IOG — no cuenta en la neta"
-    >
-      IOG
-    </span>
-  );
-}
-
 function hasAnyAmount(t: { amountArs: number | null; amountUsd: number | null }) {
   return (
     (t.amountArs != null && Number.isFinite(t.amountArs) && Math.abs(t.amountArs) > 0) ||
@@ -150,7 +132,6 @@ type TxPayload = {
   members?: Member[];
   total?: number;
   periods?: string[];
-  iogCount?: number;
 };
 
 function normalizeTxPayload(data: TxPayload) {
@@ -164,7 +145,6 @@ function normalizeTxPayload(data: TxPayload) {
   return {
     list,
     total: data.total ?? list.length,
-    iog: data.iogCount ?? 0,
     categories: data.categories ?? [],
     members: data.members ?? [],
     periods: data.periods ?? [],
@@ -248,7 +228,6 @@ export function TransactionsTable() {
   const [categoryF, setCategoryF] = useState<CategoryFilter>("all");
   const [ticketF, setTicketF] = useState<TicketFilter>("all");
   const [currencyF, setCurrencyF] = useState<CurrencyFilter>("all");
-  const [iogOnly, setIogOnly] = useState(false);
   const [households, setHouseholds] = useState<HouseholdOption[]>([]);
   const [activeHouseholdId, setActiveHouseholdId] = useState<string | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -267,7 +246,6 @@ export function TransactionsTable() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
-  const [iogTotal, setIogTotal] = useState(0);
   const [exportOpen, setExportOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLDivElement>(null);
@@ -277,7 +255,6 @@ export function TransactionsTable() {
     categoryF !== "all",
     ticketF !== "all",
     currencyF !== "all",
-    iogOnly,
   ].filter(Boolean).length;
 
   useEffect(() => {
@@ -348,11 +325,10 @@ export function TransactionsTable() {
     else if (categoryF !== "all") params.set("categoryId", categoryF);
     if (ticketF !== "all") params.set("ticket", ticketF);
     if (currencyF !== "all") params.set("currency", currencyF);
-    if (iogOnly) params.set("iog", "1");
     params.set("limit", String(limit));
     params.set("offset", String(offset));
     return params;
-  }, [period, q, ownershipF, categoryF, ticketF, currencyF, iogOnly]);
+  }, [period, q, ownershipF, categoryF, ticketF, currencyF]);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -364,7 +340,6 @@ export function TransactionsTable() {
       const next = normalizeTxPayload(data);
       setRows(next.list);
       setTotalCount(next.total);
-      setIogTotal(next.iog);
       setCategories(next.categories);
       setMembers(next.members);
       if (next.periods.length) setAllPeriods(next.periods);
@@ -396,7 +371,6 @@ export function TransactionsTable() {
         const next = normalizeTxPayload(result.data);
         setRows(next.list);
         setTotalCount(next.total);
-        setIogTotal(next.iog);
         setCategories(next.categories);
         setMembers(next.members);
         if (next.periods.length) setAllPeriods(next.periods);
@@ -419,11 +393,10 @@ export function TransactionsTable() {
     return () => window.removeEventListener("lc:expense-created", onCreated);
   }, [load]);
 
-  const linkedIogCount = iogTotal;
   const sorted = rows;
   const pageRows = rows;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
-  const filterKey = `${period}\0${q}\0${ownershipF}\0${categoryF}\0${ticketF}\0${currencyF}\0${iogOnly}`;
+  const filterKey = `${period}\0${q}\0${ownershipF}\0${categoryF}\0${ticketF}\0${currencyF}`;
   const [seenFilter, setSeenFilter] = useState(filterKey);
   const [seenTxQuery, setSeenTxQuery] = useState<string | null>(null);
   const pageNow = nextPage({
@@ -729,7 +702,6 @@ export function TransactionsTable() {
     setCategoryF("all");
     setTicketF("all");
     setCurrencyF("all");
-    setIogOnly(false);
   }
 
   function assignValueFor(r: Tx): string {
@@ -1112,16 +1084,6 @@ export function TransactionsTable() {
                     <FilterChip active={currencyF === "usd"} onClick={() => setCurrencyF("usd")}>Dólares</FilterChip>
                   </div>
                 </div>
-
-                {linkedIogCount > 0 && (
-                  <div>
-                    <p className="mb-1.5 text-[11px] font-semibold text-zinc-500">Invoice IOG</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      <FilterChip active={!iogOnly} onClick={() => setIogOnly(false)}>Todos</FilterChip>
-                      <FilterChip active={iogOnly} onClick={() => setIogOnly(true)}>Solo IOG</FilterChip>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -1154,12 +1116,6 @@ export function TransactionsTable() {
             <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium dark:bg-zinc-800">
               {currencyF === "ars" ? "Pesos" : "Dólares"}
               <button type="button" onClick={() => setCurrencyF("all")} aria-label="Quitar"><X className="h-3 w-3" /></button>
-            </span>
-          )}
-          {iogOnly && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900 dark:bg-amber-950/60 dark:text-amber-100">
-              Solo IOG
-              <button type="button" onClick={() => setIogOnly(false)} aria-label="Quitar"><X className="h-3 w-3" /></button>
             </span>
           )}
         </div>
@@ -1289,7 +1245,6 @@ export function TransactionsTable() {
                       <span className="flex min-w-0 items-center gap-1.5">
                         <span className="truncate text-[15px] font-semibold">{r.descriptionNormalized}</span>
                         {r.revisar ? <RevisarBadge size="sm" /> : null}
-                        {r.linkedToInvoiceIog && <IogBadge size="sm" />}
                       </span>
                       <span className="block truncate text-[13px] text-[var(--muted-fg)]">
                         {shortDate(r.date)} · {categoryLabel(r.category?.name) || "Sin categoría"}
@@ -1512,7 +1467,6 @@ export function TransactionsTable() {
                             />
                             {r.revisar ? <RevisarBadge /> : null}
                             {isTicket && <span className="shrink-0 rounded-full bg-[var(--a2)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--on-accent)]">Ticket</span>}
-                            {r.linkedToInvoiceIog && <IogBadge />}
                           </div>
                           {r.installment && <div className="text-xs text-zinc-500">cuota {r.installment}</div>}
                           <div className="mt-1">
@@ -1527,7 +1481,6 @@ export function TransactionsTable() {
                         </td>
                         <td className="whitespace-nowrap px-3 py-2 tabular-nums">
                           <div className="inline-flex items-center gap-1.5">
-                            {r.linkedToInvoiceIog && <IogBadge />}
                             <input
                               key={`${r.id}-desk-ars-${r.amountArs ?? "∅"}`}
                               type="number"

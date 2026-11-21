@@ -25,8 +25,6 @@ export type ExpenseTx = {
   ownership: string;
   paidByUserId: string | null;
   source?: string | null;
-  /** Casita↔Invoice IOG link — Casita side skipped in neta. */
-  linkedTransactionId?: string | null;
 };
 
 export type CategoryRef = { slug: string; name: string };
@@ -70,14 +68,10 @@ export function isExpenseRow(r: {
   isCredit?: boolean;
   descriptionNormalized: string;
   source?: string | null;
-  linkedTransactionId?: string | null;
 }): boolean {
   if (r.isPayment || r.isCredit) return false;
   if (isBankAccountingEntry(r.descriptionNormalized)) return false;
   if (isPeriodDebtSource(r.source)) return false;
-  // Casita BBVA/Fiwind linked to Invoice IOG: keep history, skip neta double-count.
-  // Invoice IOG itself (source invoice_iog) stays counted in its hogar.
-  if (r.linkedTransactionId && r.source !== "invoice_iog") return false;
   return true;
 }
 

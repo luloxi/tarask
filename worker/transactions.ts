@@ -49,7 +49,6 @@ type TxRow = {
   ownership: string;
   paid_by_user_id: string | null;
   source: string;
-  linked_transaction_id: string | null;
   bank: string | null;
   category_id: string | null;
   category_slug: string | null;
@@ -134,8 +133,6 @@ async function listTransactions(req: Request, env: Env, user: SessionUser): Prom
       ownership: row.ownership === "shared" ? "shared" : "personal",
       paidByUserId: row.paid_by_user_id,
       source: row.source,
-      linkedTransactionId: row.linked_transaction_id,
-      linkedToInvoiceIog: Boolean(row.linked_transaction_id) && row.source !== "invoice_iog",
       bank: row.bank,
       category,
       hasTicket: Boolean(receipt) || row.source === "receipt",
@@ -157,7 +154,6 @@ async function listTransactions(req: Request, env: Env, user: SessionUser): Prom
     categories: page.categories,
     members: page.members,
     viewerUserId: user.id,
-    iogCount: page.iogCount,
     householdId: active.id,
     householdName: active.name,
   });
@@ -188,11 +184,11 @@ async function loadTransactionPage(
     internalIds: movements.internalIds,
   });
 
-  const [page, countRow, periods, categories, members, iogRow] = await Promise.all([
+  const [page, countRow, periods, categories, members] = await Promise.all([
     env.DB.prepare(
       `SELECT t.id, t.date, t.description_normalized, t.amount_ars, t.amount_usd,
               t.installment, t.is_payment, t.ownership, t.paid_by_user_id, t.source,
-              t.linked_transaction_id, t.bank, t.category_id,
+              t.bank, t.category_id,
               c.slug AS category_slug, c.name AS category_name,
               t.is_business, sx.type AS sync_type, sx.sent_at AS sync_sent_at,
               sx.failed_at AS sync_failed_at
@@ -200,9 +196,7 @@ async function loadTransactionPage(
        LEFT JOIN categories c ON c.id = t.category_id
        ${OUTBOX_LATEST_JOIN}
        WHERE ${where}
-       ORDER BY
-         CASE WHEN t.linked_transaction_id IS NOT NULL AND IFNULL(t.source, '') != 'invoice_iog' THEN 0 ELSE 1 END,
-         t.date DESC, t.id DESC
+       ORDER BY t.date DESC, t.id DESC
        LIMIT ? OFFSET ?`,
     )
       .bind(...binds, limit, offset)
@@ -226,15 +220,6 @@ async function loadTransactionPage(
       .all<{ period: string }>(),
     listVisibleCategories(env, active.id),
     listMembers(env, active.id),
-    env.DB.prepare(
-      `SELECT COUNT(*) AS n FROM transactions t
-       WHERE t.household_id = ?
-         AND t.linked_transaction_id IS NOT NULL
-         AND IFNULL(t.source, '') != 'invoice_iog'
-         AND ${sharedOnly ? "t.ownership = 'shared'" : "(t.ownership = 'shared' OR t.paid_by_user_id = ?)"}`,
-    )
-      .bind(...(sharedOnly ? [active.id] : [active.id, user.id]))
-      .first<{ n: number }>(),
   ]);
 
   return {
@@ -247,7 +232,6 @@ async function loadTransactionPage(
     periods: (periods.results ?? []).map((row) => row.period).filter(Boolean),
     categories,
     members,
-    iogCount: num(iogRow?.n),
   };
 }
 
@@ -304,9 +288,6 @@ function buildWhere(
   const currency = url.searchParams.get("currency");
   if (currency === "ars") parts.push("ABS(CAST(IFNULL(t.amount_ars, '0') AS REAL)) > 0");
   else if (currency === "usd") parts.push("ABS(CAST(IFNULL(t.amount_usd, '0') AS REAL)) > 0");
-  if (url.searchParams.get("iog") === "1") {
-    parts.push("t.linked_transaction_id IS NOT NULL AND IFNULL(t.source, '') != 'invoice_iog'");
-  }
   if (q) {
     const needle = `%${q.toUpperCase().replaceAll("%", "").replaceAll("_", "")}%`;
     const onlyDigits = digitsOf(q);

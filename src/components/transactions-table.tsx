@@ -464,6 +464,7 @@ export function TransactionsTable() {
         next.ownership = body.ownership === "shared" ? "shared" : "personal";
       }
       if ("date" in body && typeof body.date === "string") next.date = body.date;
+      if (typeof body.description === "string") next.descriptionNormalized = body.description;
       if ("amountArs" in body) next.amountArs = body.amountArs as number | null;
       if ("amountUsd" in body) next.amountUsd = body.amountUsd as number | null;
       if ("isBusiness" in body) {
@@ -616,7 +617,14 @@ export function TransactionsTable() {
         setToast(null);
         setReintegroPrompt(null);
         setApplyPrompt({ txId: id, categoryId: catId, count: similarCount });
-      } else if (body.ownership || categoryChanged) {
+      } else if (
+        body.ownership ||
+        categoryChanged ||
+        "description" in body ||
+        "date" in body ||
+        "amountArs" in body ||
+        "amountUsd" in body
+      ) {
         setApplyPrompt(null);
         setReintegroPrompt(null);
         setToast("Guardado.");
@@ -1312,6 +1320,21 @@ export function TransactionsTable() {
                           className="lc-input w-full"
                         />
                       </label>
+                      <label className="block">
+                        <span className="mb-1 block text-[13px] font-medium text-[var(--muted-fg)]">Nombre</span>
+                        <input
+                          type="text"
+                          defaultValue={r.descriptionNormalized}
+                          maxLength={500}
+                          disabled={savingId === r.id}
+                          onBlur={(e) => {
+                            const v = e.target.value.trim();
+                            if (v && v !== r.descriptionNormalized) void patch(r.id, { description: v });
+                          }}
+                          className="lc-input w-full"
+                          aria-label="Nombre"
+                        />
+                      </label>
                       <div className="grid grid-cols-2 gap-2">
                         <label className="block min-w-0">
                           <span className="mb-1 block text-[13px] font-medium text-[var(--muted-fg)]">Monto en pesos</span>
@@ -1475,7 +1498,18 @@ export function TransactionsTable() {
                         </td>
                         <td className="max-w-xs px-3 py-2">
                           <div className="flex min-w-0 items-center gap-1.5">
-                            <span className="truncate font-medium">{r.descriptionNormalized}</span>
+                            <input
+                              type="text"
+                              defaultValue={r.descriptionNormalized}
+                              maxLength={500}
+                              disabled={savingId === r.id}
+                              onBlur={(e) => {
+                                const v = e.target.value.trim();
+                                if (v && v !== r.descriptionNormalized) void patch(r.id, { description: v });
+                              }}
+                              className="lc-input min-w-0 flex-1 !px-1.5 !py-1 text-sm font-medium"
+                              aria-label="Nombre"
+                            />
                             {r.revisar ? <RevisarBadge /> : null}
                             {isTicket && <span className="shrink-0 rounded-full bg-[var(--a2)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--on-accent)]">Ticket</span>}
                             {r.linkedToInvoiceIog && <IogBadge />}

@@ -31,6 +31,7 @@ import { json, notPorted } from "./http";
 import { handleHouseholdActive, handleMe } from "./household-routes";
 import { handleIncomes } from "./incomes-api";
 import { flushOutbox } from "./serpix-sync";
+import { handleSheetsExport } from "./sheets-export";
 import { handleSvc } from "./svc";
 import { handleTransactions } from "./transactions";
 import { handleFiwindReclassify } from "./reclassify";
@@ -104,6 +105,7 @@ const worker = {
       }
       if (path === "/api/stats/mes-a-mes/movimientos") return await handleMesAMesMovimientos(req, env, user);
       if (path === "/api/stats/mes-a-mes") return await handleMesAMes(req, env, user);
+      if (path === "/api/export/sheets") return await handleSheetsExport(req, env, user);
       if (path === "/api/grupo") return await handleGrupo(req, env, user);
       if (path === "/api/receipts") return await handleReceipts(req, env, user);
       if (path.startsWith("/api/receipts/file/")) return await handleReceiptFile(req, env, user);

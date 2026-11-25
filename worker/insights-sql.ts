@@ -5,9 +5,31 @@
  */
 
 import type { Currency, Granularity } from "../src/lib/stats/currency";
+import type { SpendWindowKind } from "../src/lib/spend-period";
 import { ARS_EXPR, INTERNAL_ASIDE_SQL } from "./sql";
 
+export type SpendWindow = SpendWindowKind;
+
 export const SPENDING_WINDOW_DAYS = 90;
+
+/**
+ * Lower/upper date bounds. `household_id` plus this range uses
+ * `tx_household_date_idx`. "All" still filters `date <= today` so the
+ * query does not scan future rows or other households.
+ */
+export function dateWindowSql(today: string, window: SpendWindow): { sql: string; params: unknown[] } {
+  if (window.kind === "all") {
+    return { sql: "t.date <= ?", params: [today] };
+  }
+  const modifier =
+    window.kind === "days"
+      ? `-${window.days} days`
+      : window.kind === "months"
+        ? `-${window.months} months`
+        : `-${window.years} years`;
+  return { sql: "t.date >= date(?, ?) AND t.date <= ?", params: [today, modifier, today] };
+}
+
 /** About 26 Monday-start weeks. */
 export const SERIES_WEEK_DAYS = 182;
 /** Current month plus the previous 23. */
@@ -45,19 +67,20 @@ function counted(currency: Currency): { amount: string; hits: string } {
 }
 
 /**
- * Last `days` calendar days, inclusive of today and of day `days`.
- * Day `days + 1` is out. Expenses only. Transferencias internas are not in the sum.
+ * Inclusive window up to `today`. Day/month/year edges stay in; the day before
+ * is out. Expenses only. Transferencias internas are not in the sum.
  */
 export function spendingByCategoryQuery(input: {
   currency: Currency;
   today: string;
-  days: number;
+  window: SpendWindow;
   householdId: string;
   expenseSql: string;
   visibilitySql: string;
   visibilityBinds: unknown[];
 }): SqlQuery {
   const { amount, hits } = counted(input.currency);
+  const dates = dateWindowSql(input.today, input.window);
   return {
     sql: `
       SELECT COALESCE(c.name, 'Sin categoría') AS category,
@@ -67,8 +90,7 @@ export function spendingByCategoryQuery(input: {
       FROM transactions t
       LEFT JOIN categories c ON c.id = t.category_id
       WHERE t.household_id = ?
-        AND t.date >= date(?, ?)
-        AND t.date <= ?
+        AND ${dates.sql}
         AND ${input.expenseSql}
         AND IFNULL(c.slug, '') != 'transferencia-interna'
         AND ${input.visibilitySql}
@@ -76,7 +98,7 @@ export function spendingByCategoryQuery(input: {
       HAVING ROUND(SUM(${amount}), 2) != 0
       ORDER BY total DESC, category ASC
     `,
-    params: [input.householdId, input.today, `-${input.days} days`, input.today, ...input.visibilityBinds],
+    params: [input.householdId, ...dates.params, ...input.visibilityBinds],
   };
 }
 
@@ -84,13 +106,14 @@ export function spendingByCategoryQuery(input: {
 export function internalAsideQuery(input: {
   currency: Currency;
   today: string;
-  days: number;
+  window: SpendWindow;
   householdId: string;
   visibilitySql: string;
   visibilityBinds: unknown[];
   internalIdsJson: string;
 }): SqlQuery {
   const { amount, hits } = counted(input.currency);
+  const dates = dateWindowSql(input.today, input.window);
   return {
     sql: `
       SELECT ${hits} AS count,
@@ -98,16 +121,13 @@ export function internalAsideQuery(input: {
       FROM transactions t
       LEFT JOIN categories c ON c.id = t.category_id
       WHERE t.household_id = ?
-        AND t.date >= date(?, ?)
-        AND t.date <= ?
+        AND ${dates.sql}
         AND ${INTERNAL_ASIDE_SQL}
         AND ${input.visibilitySql}
     `,
     params: [
       input.householdId,
-      input.today,
-      `-${input.days} days`,
-      input.today,
+      ...dates.params,
       input.internalIdsJson,
       ...input.visibilityBinds,
     ],

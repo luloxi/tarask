@@ -6,7 +6,7 @@
 
 import type { Currency, Granularity } from "../src/lib/stats/currency";
 import type { SpendWindowKind } from "../src/lib/spend-period";
-import { ARS_EXPR, INTERNAL_ASIDE_SQL } from "./sql";
+import { ARS_EXPR, INTERNAL_ASIDE_SQL, USD_EXPR } from "./sql";
 
 export type SpendWindow = SpendWindowKind;
 
@@ -124,6 +124,139 @@ export function internalAsideQuery(input: {
         AND ${dates.sql}
         AND ${INTERNAL_ASIDE_SQL}
         AND ${input.visibilitySql}
+    `,
+    params: [
+      input.householdId,
+      ...dates.params,
+      input.internalIdsJson,
+      ...input.visibilityBinds,
+    ],
+  };
+}
+
+/** One month of ARS plus USD (wallet and bank), same split as the home total. */
+export type MonthlySpendRow = {
+  category: string;
+  slug: string;
+  month: string;
+  count: number;
+  ars: number;
+  usd: number;
+};
+
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+/**
+ * Convert each month's USD at that month's `monthEndBuy` rate (oficial
+ * compra), then add ARS. A missing rate leaves the USD leg unconverted,
+ * same as the dashboard total.
+ */
+export function foldCombinedSpend(
+  rows: Array<Pick<MonthlySpendRow, "category" | "slug" | "count" | "month" | "ars" | "usd">>,
+  rateForMonth: (month: string) => number,
+): { rows: { category: string; slug: string; count: number; total: number }[]; total: number } {
+  const byCat = new Map<string, { category: string; slug: string; count: number; total: number }>();
+  for (const row of rows) {
+    const rate = rateForMonth(row.month);
+    const converted = row.ars + (rate > 0 ? row.usd * rate : 0);
+    const key = `${row.slug}\0${row.category}`;
+    const cur = byCat.get(key) ?? {
+      category: row.category,
+      slug: row.slug,
+      count: 0,
+      total: 0,
+    };
+    cur.count += row.count;
+    cur.total += converted;
+    byCat.set(key, cur);
+  }
+  const folded = [...byCat.values()]
+    .map((row) => ({ ...row, total: round2(row.total) }))
+    .filter((row) => row.total !== 0)
+    .sort((a, b) => b.total - a.total || a.category.localeCompare(b.category));
+  let total = 0;
+  for (const row of folded) total += row.total;
+  return { rows: folded, total: round2(total) };
+}
+
+export function foldCombinedInternal(
+  rows: Array<{ month: string; count: number; ars: number; usd: number }>,
+  rateForMonth: (month: string) => number,
+): { count: number; total: number } {
+  let count = 0;
+  let total = 0;
+  for (const row of rows) {
+    const rate = rateForMonth(row.month);
+    count += row.count;
+    total += row.ars + (rate > 0 ? row.usd * rate : 0);
+  }
+  return { count, total: round2(total) };
+}
+
+/**
+ * Same window and filters as the single-currency pie, but one row per
+ * category and month so each USD leg can use that month's rate.
+ */
+export function spendingByCategoryCombinedQuery(input: {
+  today: string;
+  window: SpendWindow;
+  householdId: string;
+  expenseSql: string;
+  visibilitySql: string;
+  visibilityBinds: unknown[];
+}): SqlQuery {
+  const ars = `(${ARS_EXPR})`;
+  const usd = `(${USD_EXPR})`;
+  const dates = dateWindowSql(input.today, input.window);
+  return {
+    sql: `
+      SELECT COALESCE(c.name, 'Sin categoría') AS category,
+             COALESCE(c.slug, '') AS slug,
+             substr(t.date, 1, 7) AS month,
+             SUM(CASE WHEN ${ars} != 0 OR ${usd} != 0 THEN 1 ELSE 0 END) AS count,
+             ROUND(SUM(${ars}), 2) AS ars,
+             ROUND(SUM(${usd}), 2) AS usd
+      FROM transactions t
+      LEFT JOIN categories c ON c.id = t.category_id
+      WHERE t.household_id = ?
+        AND ${dates.sql}
+        AND ${input.expenseSql}
+        AND IFNULL(c.slug, '') != 'transferencia-interna'
+        AND ${input.visibilitySql}
+      GROUP BY c.id, category, slug, month
+      HAVING ROUND(SUM(${ars}), 2) != 0 OR ROUND(SUM(${usd}), 2) != 0
+      ORDER BY month ASC, category ASC
+    `,
+    params: [input.householdId, ...dates.params, ...input.visibilityBinds],
+  };
+}
+
+export function internalAsideCombinedQuery(input: {
+  today: string;
+  window: SpendWindow;
+  householdId: string;
+  visibilitySql: string;
+  visibilityBinds: unknown[];
+  internalIdsJson: string;
+}): SqlQuery {
+  const ars = `(${ARS_EXPR})`;
+  const usd = `(${USD_EXPR})`;
+  const dates = dateWindowSql(input.today, input.window);
+  return {
+    sql: `
+      SELECT substr(t.date, 1, 7) AS month,
+             SUM(CASE WHEN ${ars} != 0 OR ${usd} != 0 THEN 1 ELSE 0 END) AS count,
+             ROUND(SUM(${ars}), 2) AS ars,
+             ROUND(SUM(${usd}), 2) AS usd
+      FROM transactions t
+      LEFT JOIN categories c ON c.id = t.category_id
+      WHERE t.household_id = ?
+        AND ${dates.sql}
+        AND ${INTERNAL_ASIDE_SQL}
+        AND ${input.visibilitySql}
+      GROUP BY month
     `,
     params: [
       input.householdId,

@@ -19,9 +19,14 @@ import type { Env } from "./env";
 import { activeHousehold, forceSharedOnly, type HouseholdRow } from "./household";
 import { json, jsonPrivate, num, todayAr } from "./http";
 import { annotateIncomeRows, type IncomeRow } from "./income";
+import { loadFx, monthEndBuy } from "./fx";
 import {
   SPENDING_WINDOW_DAYS,
+  foldCombinedInternal,
+  foldCombinedSpend,
+  internalAsideCombinedQuery,
   internalAsideQuery,
+  spendingByCategoryCombinedQuery,
   spendingByCategoryQuery,
   spendingSeriesQuery,
   variableIncomeByMonthSql,
@@ -39,7 +44,8 @@ export async function handleSpendingByCategory(
 ): Promise<Response> {
   if (req.method !== "GET") return json({ error: "Método no permitido" }, 405);
   const url = new URL(req.url);
-  const currency = currencyOf(url);
+  const combined = url.searchParams.get("currency") === "combined";
+  const currency = combined ? "ARS" : currencyOf(url);
   if (!currency) return json({ error: "Moneda inválida" }, 400);
   const parsed = parseSpendWindowParam(url);
   if (!parsed) return json({ error: "Período inválido" }, 400);
@@ -49,6 +55,9 @@ export async function handleSpendingByCategory(
   try {
     const movements = await loadExcludedMovementIds(env.DB, user.id, env.OWN_ACCOUNT_IDS);
     const expense = expenseSql(movements.excludedIds);
+    if (combined) {
+      return await respondCombined(env, scope, parsed, expense, movements.internalIds);
+    }
     const categoryQuery = spendingByCategoryQuery({
       currency,
       today: scope.today,
@@ -228,7 +237,79 @@ export async function handleIncomeByMonth(
   }
 }
 
+type SpendScope = {
+  household: HouseholdRow;
+  today: string;
+  visibility: { sql: string; binds: unknown[] };
+};
+
+async function respondCombined(
+  env: Env,
+  scope: SpendScope,
+  parsed: ParsedSpendWindow,
+  expense: string,
+  internalIds: readonly string[],
+): Promise<Response> {
+  const categoryQuery = spendingByCategoryCombinedQuery({
+    today: scope.today,
+    window: parsed.window,
+    householdId: scope.household.id,
+    expenseSql: expense,
+    visibilitySql: scope.visibility.sql,
+    visibilityBinds: scope.visibility.binds,
+  });
+  const aside = internalAsideCombinedQuery({
+    today: scope.today,
+    window: parsed.window,
+    householdId: scope.household.id,
+    visibilitySql: scope.visibility.sql,
+    visibilityBinds: scope.visibility.binds,
+    internalIdsJson: JSON.stringify(internalIds),
+  });
+  const [categories, internal, fx] = await Promise.all([
+    env.DB.prepare(categoryQuery.sql)
+      .bind(...categoryQuery.params)
+      .all<{ category: string; slug: string; month: string; count: number | null; ars: number | null; usd: number | null }>(),
+    env.DB.prepare(aside.sql)
+      .bind(...aside.params)
+      .all<{ month: string; count: number | null; ars: number | null; usd: number | null }>(),
+    loadFx(),
+  ]);
+  const rateForMonth = (month: string) => monthEndBuy(fx, month);
+  const folded = foldCombinedSpend(
+    (categories.results ?? []).map((row) => ({
+      category: String(row.category),
+      slug: String(row.slug ?? ""),
+      month: String(row.month),
+      count: num(row.count),
+      ars: num(row.ars),
+      usd: num(row.usd),
+    })),
+    rateForMonth,
+  );
+  const asideFold = foldCombinedInternal(
+    (internal.results ?? []).map((row) => ({
+      month: String(row.month),
+      count: num(row.count),
+      ars: num(row.ars),
+      usd: num(row.usd),
+    })),
+    rateForMonth,
+  );
+  return jsonPrivate({
+    currency: "ARS",
+    combined: true,
+    period: parsed.period,
+    days: parsed.window.kind === "days" ? parsed.window.days : null,
+    today: scope.today,
+    total: folded.total,
+    rows: folded.rows,
+    internal: asideFold,
+  });
+}
+
 function currencyOf(url: URL): Currency | null {
+
   const raw = url.searchParams.get("currency") ?? "ARS";
   return isCurrency(raw) ? raw : null;
 }

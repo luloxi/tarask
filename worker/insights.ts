@@ -13,6 +13,7 @@ import {
   isIncomeFrequency,
 } from "../src/lib/incomes";
 import { isCurrency, isGranularity, type Currency, type Granularity } from "../src/lib/stats/currency";
+import { isSpendPeriodId, windowForPeriod, type SpendPeriodId } from "../src/lib/spend-period";
 import type { SessionUser } from "./auth";
 import type { Env } from "./env";
 import { activeHousehold, forceSharedOnly, type HouseholdRow } from "./household";
@@ -24,6 +25,7 @@ import {
   spendingByCategoryQuery,
   spendingSeriesQuery,
   variableIncomeByMonthSql,
+  type SpendWindow,
 } from "./insights-sql";
 import { expenseSql } from "./sql";
 import { loadExcludedMovementIds } from "./transfer-class";
@@ -39,8 +41,8 @@ export async function handleSpendingByCategory(
   const url = new URL(req.url);
   const currency = currencyOf(url);
   if (!currency) return json({ error: "Moneda inválida" }, 400);
-  const days = daysOf(url);
-  if (days == null) return json({ error: "Días inválidos" }, 400);
+  const parsed = parseSpendWindowParam(url);
+  if (!parsed) return json({ error: "Período inválido" }, 400);
   const scope = await scopeOf(req, env, user, url);
   if (scope instanceof Response) return scope;
 
@@ -50,7 +52,7 @@ export async function handleSpendingByCategory(
     const categoryQuery = spendingByCategoryQuery({
       currency,
       today: scope.today,
-      days,
+      window: parsed.window,
       householdId: scope.household.id,
       expenseSql: expense,
       visibilitySql: scope.visibility.sql,
@@ -59,7 +61,7 @@ export async function handleSpendingByCategory(
     const aside = internalAsideQuery({
       currency,
       today: scope.today,
-      days,
+      window: parsed.window,
       householdId: scope.household.id,
       visibilitySql: scope.visibility.sql,
       visibilityBinds: scope.visibility.binds,
@@ -83,7 +85,8 @@ export async function handleSpendingByCategory(
     for (const row of rows) total += row.total;
     return jsonPrivate({
       currency,
-      days,
+      period: parsed.period,
+      days: parsed.window.kind === "days" ? parsed.window.days : null,
       today: scope.today,
       total: round2(total),
       rows,
@@ -230,13 +233,31 @@ function currencyOf(url: URL): Currency | null {
   return isCurrency(raw) ? raw : null;
 }
 
-function daysOf(url: URL): number | null {
+export type ParsedSpendWindow = {
+  period: SpendPeriodId | null;
+  window: SpendWindow;
+};
+
+/**
+ * `period` (30d / 90d / 6m / 1y / all) wins when present.
+ * Otherwise `days` (1–3660, or `all`). Missing both keeps the historical
+ * 90-day default so older callers of this endpoint stay unchanged.
+ */
+export function parseSpendWindowParam(url: URL): ParsedSpendWindow | null {
+  const period = url.searchParams.get("period");
+  if (period != null && period !== "") {
+    if (!isSpendPeriodId(period)) return null;
+    return { period, window: windowForPeriod(period) };
+  }
   const raw = url.searchParams.get("days");
-  if (raw == null || raw === "") return SPENDING_WINDOW_DAYS;
+  if (raw == null || raw === "") {
+    return { period: "90d", window: { kind: "days", days: SPENDING_WINDOW_DAYS } };
+  }
+  if (raw === "all") return { period: "all", window: { kind: "all" } };
   if (!/^\d+$/.test(raw)) return null;
   const days = Number(raw);
   if (days < 1 || days > 3660) return null;
-  return days;
+  return { period: null, window: { kind: "days", days } };
 }
 
 async function scopeOf(req: Request, env: Env, user: SessionUser, url: URL) {

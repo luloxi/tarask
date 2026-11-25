@@ -6,8 +6,8 @@ import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import type { SessionUser } from "./auth";
 import type { Env } from "./env";
-import { handleIncomeByMonth, handleSpendingByCategory, handleSpendingSeries } from "./insights";
-import { internalAsideQuery, spendingByCategoryQuery, spendingSeriesQuery } from "./insights-sql";
+import { handleIncomeByMonth, handleSpendingByCategory, handleSpendingSeries, parseSpendWindowParam } from "./insights";
+import { dateWindowSql, internalAsideQuery, spendingByCategoryQuery, spendingSeriesQuery } from "./insights-sql";
 import { expenseSql } from "./sql";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -139,7 +139,7 @@ describe("spending SQL", () => {
     const ars = spendingByCategoryQuery({
       currency: "ARS",
       today: "2026-06-15",
-      days: 90,
+      window: { kind: "days", days: 90 },
       householdId: "h1",
       expenseSql: expense,
       visibilitySql: visibility.sql,
@@ -153,7 +153,7 @@ describe("spending SQL", () => {
     const usdt = spendingByCategoryQuery({
       currency: "USDT",
       today: "2026-06-15",
-      days: 90,
+      window: { kind: "days", days: 90 },
       householdId: "h1",
       expenseSql: expense,
       visibilitySql: visibility.sql,
@@ -165,7 +165,7 @@ describe("spending SQL", () => {
     const usd = spendingByCategoryQuery({
       currency: "USD",
       today: "2026-06-15",
-      days: 90,
+      window: { kind: "days", days: 90 },
       householdId: "h1",
       expenseSql: expense,
       visibilitySql: visibility.sql,
@@ -177,7 +177,7 @@ describe("spending SQL", () => {
     const aside = internalAsideQuery({
       currency: "ARS",
       today: "2026-06-15",
-      days: 90,
+      window: { kind: "days", days: 90 },
       householdId: "h1",
       visibilitySql: visibility.sql,
       visibilityBinds: visibility.binds,
@@ -211,7 +211,7 @@ describe("spending SQL", () => {
     const ars = spendingByCategoryQuery({
       currency: "ARS",
       today: "2026-06-15",
-      days: 90,
+      window: { kind: "days", days: 90 },
       householdId: "h1",
       expenseSql: expense,
       visibilitySql: visibility.sql,
@@ -225,7 +225,7 @@ describe("spending SQL", () => {
     const aside = internalAsideQuery({
       currency: "ARS",
       today: "2026-06-15",
-      days: 90,
+      window: { kind: "days", days: 90 },
       householdId: "h1",
       visibilitySql: visibility.sql,
       visibilityBinds: visibility.binds,
@@ -254,6 +254,89 @@ describe("spending SQL", () => {
       rows.map((row) => ({ bucket: row.bucket, total: Number(row.total) })),
       [{ bucket: "2026-06-15", total: 7 }],
     );
+  });
+});
+
+describe("spend windows", () => {
+  const expense = expenseSql();
+  const visibility = { sql: "1 = 1", binds: [] };
+
+  function totalFor(db: DatabaseSync, window: Parameters<typeof spendingByCategoryQuery>[0]["window"]) {
+    const query = spendingByCategoryQuery({
+      currency: "ARS",
+      today: "2026-06-15",
+      window,
+      householdId: "h1",
+      expenseSql: expense,
+      visibilitySql: visibility.sql,
+      visibilityBinds: visibility.binds,
+    });
+    const rows = db.prepare(query.sql).all(...(query.params as never[])) as Array<{ total: number }>;
+    return rows.reduce((sum, row) => sum + Number(row.total), 0);
+  }
+
+  it("keeps day 30, drops day 31, and includes the far past only in all", () => {
+    const db = openDb();
+    seedHome(db);
+    insertTx(db, { id: "d31", date: "2026-05-15", desc: "DIA31", ars: "5" });
+    insertTx(db, { id: "d30", date: "2026-05-16", desc: "DIA30", ars: "8" });
+    insertTx(db, { id: "hoy", date: "2026-06-15", desc: "HOY", ars: "2" });
+    insertTx(db, { id: "old", date: "2024-01-02", desc: "VIEJO", ars: "40" });
+    insertTx(db, { id: "fut", date: "2026-06-16", desc: "FUTURO", ars: "9" });
+
+    assert.equal(totalFor(db, { kind: "days", days: 30 }), 10);
+    assert.equal(totalFor(db, { kind: "all" }), 55);
+  });
+
+  it("uses calendar 6 months and 1 year, inclusive of the far edge", () => {
+    const db = openDb();
+    seedHome(db);
+    // today 2026-06-15 → 6 months: 2025-12-15 in, 2025-12-14 out
+    insertTx(db, { id: "m-out", date: "2025-12-14", desc: "ANTES6M", ars: "3" });
+    insertTx(db, { id: "m-in", date: "2025-12-15", desc: "BORDE6M", ars: "7" });
+    // 1 year: 2025-06-15 in, 2025-06-14 out
+    insertTx(db, { id: "y-out", date: "2025-06-14", desc: "ANTES1A", ars: "11" });
+    insertTx(db, { id: "y-in", date: "2025-06-15", desc: "BORDE1A", ars: "13" });
+    insertTx(db, { id: "hoy", date: "2026-06-15", desc: "HOY", ars: "2" });
+
+    assert.equal(totalFor(db, { kind: "months", months: 6 }), 9);
+    assert.equal(totalFor(db, { kind: "years", years: 1 }), 25);
+  });
+
+  it("always binds household and an upper date so the date index can be used", () => {
+    const ranged = dateWindowSql("2026-06-15", { kind: "days", days: 30 });
+    assert.match(ranged.sql, /t\.date >= date\(\?, \?\) AND t\.date <= \?/);
+    assert.deepEqual(ranged.params, ["2026-06-15", "-30 days", "2026-06-15"]);
+    const all = dateWindowSql("2026-06-15", { kind: "all" });
+    assert.equal(all.sql, "t.date <= ?");
+    assert.deepEqual(all.params, ["2026-06-15"]);
+    const months = dateWindowSql("2026-06-15", { kind: "months", months: 6 });
+    assert.deepEqual(months.params, ["2026-06-15", "-6 months", "2026-06-15"]);
+  });
+
+  it("parses period and days from the query string", () => {
+    assert.deepEqual(parseSpendWindowParam(new URL("https://tarask.test/api/spending-by-category")), {
+      period: "90d",
+      window: { kind: "days", days: 90 },
+    });
+    assert.deepEqual(
+      parseSpendWindowParam(new URL("https://tarask.test/api/spending-by-category?period=30d")),
+      { period: "30d", window: { kind: "days", days: 30 } },
+    );
+    assert.deepEqual(
+      parseSpendWindowParam(new URL("https://tarask.test/api/spending-by-category?period=all&days=90")),
+      { period: "all", window: { kind: "all" } },
+    );
+    assert.deepEqual(
+      parseSpendWindowParam(new URL("https://tarask.test/api/spending-by-category?days=all")),
+      { period: "all", window: { kind: "all" } },
+    );
+    assert.deepEqual(
+      parseSpendWindowParam(new URL("https://tarask.test/api/spending-by-category?days=45")),
+      { period: null, window: { kind: "days", days: 45 } },
+    );
+    assert.equal(parseSpendWindowParam(new URL("https://tarask.test/api/spending-by-category?period=2y")), null);
+    assert.equal(parseSpendWindowParam(new URL("https://tarask.test/api/spending-by-category?days=0")), null);
   });
 });
 
@@ -325,5 +408,32 @@ describe("insight handlers", () => {
     const seriesBody = (await series.json()) as { granularity: string; rows: Array<{ bucket: string; total: number }> };
     assert.equal(seriesBody.granularity, "month");
     assert.ok(seriesBody.rows.some((row) => row.bucket === "2026-08" && row.total === 100));
+  });
+
+  it("accepts period=all and rejects an unknown period", async () => {
+    const db = openDb();
+    seedHome(db);
+    insertTx(db, { id: "old", date: "2020-02-02", desc: "VIEJO", ars: "15" });
+    const ok = await handleSpendingByCategory(
+      new Request("https://tarask.test/api/spending-by-category?currency=ARS&period=all", {
+        headers: { cookie: "lc_household=h1" },
+      }),
+      envFor(db),
+      user,
+    );
+    assert.equal(ok.status, 200);
+    const body = (await ok.json()) as { period: string; days: number | null; total: number };
+    assert.equal(body.period, "all");
+    assert.equal(body.days, null);
+    assert.equal(body.total, 15);
+
+    const bad = await handleSpendingByCategory(
+      new Request("https://tarask.test/api/spending-by-category?currency=ARS&period=2y", {
+        headers: { cookie: "lc_household=h1" },
+      }),
+      envFor(db),
+      user,
+    );
+    assert.equal(bad.status, 400);
   });
 });

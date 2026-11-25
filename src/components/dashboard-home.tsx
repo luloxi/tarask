@@ -16,7 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { formatPesos, formatUsd, cn } from "@/lib/utils";
-import { NinetyDaySpend } from "@/components/ninety-day-spend";
+import { HomeSpend } from "@/components/home-spend";
 import { PatrimonioGlance } from "@/components/patrimonio-view";
 import { formatPeriodTitle, isCurrentCalendarMonth } from "@/lib/period-label";
 import { CategoryIcon } from "@/lib/category-icons";
@@ -728,7 +728,7 @@ export function DashboardHome({
         )}
       </Link>
 
-      <NinetyDaySpend />
+      <HomeSpend />
 
       {/* 3. Cómo viene tu patrimonio */}
       <PatrimonioGlance />

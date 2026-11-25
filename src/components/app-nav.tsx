@@ -16,12 +16,14 @@ import {
   Shield,
   MoreHorizontal,
   X,
+  Sheet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiGet, invalidateApi } from "@/lib/api/client";
 import { BrandLogo } from "@/components/brand-logo";
 import { HouseholdSwitcher } from "@/components/household-switcher";
 import { useTheme } from "@/components/theme-provider";
+import { SheetsExportDialog } from "@/components/sheets-export";
 import {
   MAIN_TABS,
   activeMainTab,
@@ -48,6 +50,7 @@ export function AppNav() {
   const { resolved, toggle } = useTheme();
   const [isAdmin, setIsAdmin] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [sheetsOpen, setSheetsOpen] = useState(false);
   const [seenPath, setSeenPath] = useState(pathname);
   if (pathname !== seenPath) {
     setSeenPath(pathname);
@@ -236,6 +239,19 @@ export function AppNav() {
               <li>
                 <button
                   type="button"
+                  onClick={() => {
+                    setMoreOpen(false);
+                    setSheetsOpen(true);
+                  }}
+                  className="flex min-h-12 w-full cursor-pointer items-center gap-3 rounded-2xl px-3 text-left text-[15px] font-medium transition-colors hover:bg-[var(--surface-muted)]"
+                >
+                  <Sheet className="h-5 w-5 text-[var(--muted)]" strokeWidth={1.8} />
+                  Guardar en Google Sheets
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
                   onClick={toggle}
                   className="flex min-h-12 w-full cursor-pointer items-center gap-3 rounded-2xl px-3 text-left text-[15px] font-medium transition-colors hover:bg-[var(--surface-muted)]"
                 >
@@ -261,6 +277,7 @@ export function AppNav() {
           </div>
         </>
       )}
+      {sheetsOpen && <SheetsExportDialog onClose={() => setSheetsOpen(false)} />}
     </>
   );
 }

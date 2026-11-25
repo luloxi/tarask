@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useJsonResource } from "@/hooks/use-json-resource";
-import type { Currency } from "@/lib/stats/currency";
 import {
   DEFAULT_SPEND_PERIOD,
   SPEND_PERIODS,
@@ -13,10 +12,10 @@ import {
   type SpendPeriodId,
 } from "@/lib/spend-period";
 import { formatCurrencyAmount } from "@/lib/utils";
-import { CURRENCY_OPTIONS, ChoiceRow, Legend, PieChart } from "@/components/money-charts";
+import { ChoiceRow, Legend, PieChart } from "@/components/money-charts";
 
 type Spending = {
-  currency: Currency;
+  currency: "ARS";
   period: SpendPeriodId | null;
   total: number;
   rows: { category: string; slug: string; count: number; total: number }[];
@@ -24,7 +23,6 @@ type Spending = {
 };
 
 export function HomeSpend() {
-  const [currency, setCurrency] = useState<Currency>("ARS");
   const [period, setPeriod] = useState<SpendPeriodId>(DEFAULT_SPEND_PERIOD);
   const [ready, setReady] = useState(false);
   useEffect(() => {
@@ -33,8 +31,8 @@ export function HomeSpend() {
   }, []);
 
   const resource = useJsonResource<Spending>(
-    ready ? `/api/spending-by-category?period=${period}&currency=${currency}` : null,
-    [currency, period, ready],
+    ready ? `/api/spending-by-category?period=${period}&currency=combined` : null,
+    [period, ready],
     { fallbackError: "No se pudo leer el gasto", staleWhileReload: true },
   );
   const { reload } = resource;
@@ -59,7 +57,7 @@ export function HomeSpend() {
         <div className="min-w-0 flex-1">
           <h2 className="text-[15px] font-semibold">{meta.title}</h2>
           <p className="mt-0.5 text-[13px] leading-snug text-[var(--muted-fg)]">
-            Gastos por categoría. Una moneda por vez. Las transferencias internas no entran.
+            Gastos por categoría. Las transferencias internas no entran.
           </p>
         </div>
         <Link
@@ -69,9 +67,8 @@ export function HomeSpend() {
           Ver evolución
         </Link>
       </div>
-      <div className="mt-3 space-y-2">
+      <div className="mt-3">
         <ChoiceRow label="Período" value={period} options={SPEND_PERIODS} onChange={onPeriod} />
-        <ChoiceRow label="Moneda" value={currency} options={CURRENCY_OPTIONS} onChange={setCurrency} />
       </div>
       {resource.loading && !data ? (
         <div className="mt-4 space-y-3" role="status" aria-live="polite" aria-label="Cargando gastos">

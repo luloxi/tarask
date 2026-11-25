@@ -6,8 +6,17 @@ import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import type { SessionUser } from "./auth";
 import type { Env } from "./env";
+import { primeFxForTests } from "./fx";
 import { handleIncomeByMonth, handleSpendingByCategory, handleSpendingSeries, parseSpendWindowParam } from "./insights";
-import { dateWindowSql, internalAsideQuery, spendingByCategoryQuery, spendingSeriesQuery } from "./insights-sql";
+import {
+  dateWindowSql,
+  foldCombinedInternal,
+  foldCombinedSpend,
+  internalAsideQuery,
+  spendingByCategoryCombinedQuery,
+  spendingByCategoryQuery,
+  spendingSeriesQuery,
+} from "./insights-sql";
 import { expenseSql } from "./sql";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -337,6 +346,135 @@ describe("spend windows", () => {
     );
     assert.equal(parseSpendWindowParam(new URL("https://tarask.test/api/spending-by-category?period=2y")), null);
     assert.equal(parseSpendWindowParam(new URL("https://tarask.test/api/spending-by-category?days=0")), null);
+  });
+});
+
+describe("combined spend", () => {
+  const expense = expenseSql();
+  const visibility = { sql: "1 = 1", binds: [] };
+
+  it("converts each month's USD at that month's oficial compra and adds ARS", () => {
+    const folded = foldCombinedSpend(
+      [
+        { category: "Supermercado", slug: "supermercado", month: "2026-05", count: 1, ars: 10, usd: 2 },
+        { category: "Supermercado", slug: "supermercado", month: "2026-06", count: 1, ars: 5, usd: 1 },
+        { category: "Transporte", slug: "transporte", month: "2026-06", count: 1, ars: 0, usd: 3 },
+      ],
+      (month) => (month === "2026-05" ? 1000 : 1200),
+    );
+    // 10 + 2*1000 + 5 + 1*1200 = 3215 supermarket; 3*1200 = 3600 transport
+    assert.equal(folded.total, 6815);
+    assert.deepEqual(
+      folded.rows.map((row) => ({ category: row.category, total: row.total, count: row.count })),
+      [
+        { category: "Transporte", total: 3600, count: 1 },
+        { category: "Supermercado", total: 3215, count: 2 },
+      ],
+    );
+  });
+
+  it("leaves the USD leg unconverted when that month has no rate", () => {
+    const folded = foldCombinedSpend(
+      [{ category: "Netflix", slug: "streaming", month: "2026-06", count: 1, ars: 8, usd: 4 }],
+      () => 0,
+    );
+    assert.equal(folded.total, 8);
+    assert.equal(folded.rows[0]?.total, 8);
+  });
+
+  it("groups ARS and USD (including Fiwind) by month and converts them", () => {
+    const db = openDb();
+    seedHome(db);
+    insertTx(db, { id: "ars", date: "2026-06-10", desc: "COTO", ars: "20" });
+    insertTx(db, { id: "usd", date: "2026-06-11", desc: "NETFLIX", usd: "4", bank: "BBVA" });
+    insertTx(db, { id: "usdt", date: "2026-05-20", desc: "PAGO A KIOSCO", usd: "2", bank: "Fiwind" });
+    insertTx(db, { id: "old", date: "2026-03-01", desc: "LEJOS", ars: "999" });
+    const query = spendingByCategoryCombinedQuery({
+      today: "2026-06-15",
+      window: { kind: "days", days: 30 },
+      householdId: "h1",
+      expenseSql: expense,
+      visibilitySql: visibility.sql,
+      visibilityBinds: visibility.binds,
+    });
+    assert.match(query.sql, /substr\(t\.date, 1, 7\) AS month/);
+    assert.match(query.sql, /t\.date >= date\(\?, \?\) AND t\.date <= \?/);
+    const rows = db.prepare(query.sql).all(...(query.params as never[])) as Array<{
+      category: string;
+      month: string;
+      ars: number;
+      usd: number;
+    }>;
+    const byMonth = Object.fromEntries(rows.map((row) => [row.month, row]));
+    assert.equal(Number(byMonth["2026-06"]?.ars), 20);
+    assert.equal(Number(byMonth["2026-06"]?.usd), 4);
+    assert.equal(Number(byMonth["2026-05"]?.ars), 0);
+    assert.equal(Number(byMonth["2026-05"]?.usd), 2);
+    assert.equal(rows.some((row) => row.month === "2026-03"), false);
+    const folded = foldCombinedSpend(
+      rows.map((row) => ({
+        category: row.category,
+        slug: "supermercado",
+        month: row.month,
+        count: 1,
+        ars: Number(row.ars),
+        usd: Number(row.usd),
+      })),
+      (month) => (month === "2026-05" ? 900 : 1000),
+    );
+    // 20 + 4*1000 + 2*900 = 5820
+    assert.equal(folded.total, 5820);
+  });
+
+  it("serves a combined total in ARS and keeps the single-currency path", async () => {
+    const db = openDb();
+    seedHome(db);
+    insertTx(db, { id: "ars", date: "2026-06-10", desc: "COTO", ars: "20" });
+    insertTx(db, { id: "usd", date: "2026-06-11", desc: "NETFLIX", usd: "4", bank: "BBVA" });
+    primeFxForTests({ blue: 1100, byDate: new Map([["2026-06-15", 1000]]) });
+    const combined = await handleSpendingByCategory(
+      new Request("https://tarask.test/api/spending-by-category?currency=combined&period=1y", {
+        headers: { cookie: "lc_household=h1" },
+      }),
+      envFor(db),
+      user,
+    );
+    assert.equal(combined.status, 200);
+    const body = (await combined.json()) as {
+      currency: string;
+      combined: boolean;
+      period: string;
+      total: number;
+    };
+    assert.equal(body.currency, "ARS");
+    assert.equal(body.combined, true);
+    assert.equal(body.period, "1y");
+    assert.equal(body.total, 4020);
+
+    const arsOnly = await handleSpendingByCategory(
+      new Request("https://tarask.test/api/spending-by-category?currency=ARS&period=1y", {
+        headers: { cookie: "lc_household=h1" },
+      }),
+      envFor(db),
+      user,
+    );
+    const arsBody = (await arsOnly.json()) as { currency: string; combined?: boolean; total: number };
+    assert.equal(arsBody.currency, "ARS");
+    assert.equal(arsBody.combined, undefined);
+    assert.equal(arsBody.total, 20);
+    primeFxForTests(null);
+  });
+
+  it("folds internal transfers with the same monthly rate", () => {
+    const aside = foldCombinedInternal(
+      [
+        { month: "2026-05", count: 1, ars: 0, usd: 10 },
+        { month: "2026-06", count: 1, ars: 50, usd: 0 },
+      ],
+      (month) => (month === "2026-05" ? 900 : 1000),
+    );
+    assert.equal(aside.count, 2);
+    assert.equal(aside.total, 9050);
   });
 });
 
